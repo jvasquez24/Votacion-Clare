@@ -37,7 +37,7 @@
 
   /* ── HEADER ── */
   .header {
-    background: var(--cr-azul);
+    background: #111111;
     color: white;
     padding: 0;
     position: relative;
@@ -675,6 +675,81 @@
     .header-inner { flex-direction: column; align-items: flex-start; }
     .parties-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── SYNC BAR ── */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1.25rem;
+    margin-bottom: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow);
+  }
+  .sync-bar-left {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 0.88rem; color: var(--text-muted);
+  }
+  .sync-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--surface2);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .sync-dot.ok   { background: var(--success); box-shadow: 0 0 0 3px var(--success-bg); }
+  .sync-dot.spin { background: var(--cr-amarillo); box-shadow: 0 0 0 3px var(--gold-light); }
+  .sync-dot.err  { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-bg); }
+  .sync-dot.local { background: #6B7280; box-shadow: 0 0 0 3px var(--surface2); }
+  .sync-time {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 0.15rem 0.6rem;
+    border-radius: 100px;
+  }
+  .sync-bar-right {
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .sync-auto-label {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.82rem; color: var(--text-muted); cursor: pointer;
+    user-select: none;
+  }
+  .sync-auto-label input { cursor: pointer; accent-color: var(--cr-azul); }
+
+  .btn-refresh {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--cr-azul);
+    color: white;
+    border: none;
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-refresh:hover { background: #001f60; transform: translateY(-1px); }
+  .btn-refresh:disabled { background: #aaa; cursor: not-allowed; transform: none; }
+  .btn-refresh svg { transition: transform 0.6s; }
+  .btn-refresh.spinning svg { animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sheet-update-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.75rem;
+    background: var(--success-bg);
+    color: var(--success);
+    padding: 0.2rem 0.6rem;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+
 </style>
 </head>
 <body>
@@ -704,7 +779,7 @@
     </div>
     <nav class="header-nav">
       <button class="nav-btn active" onclick="showView('voter')">🗳️ Votar</button>
-      <button class="nav-btn" onclick="showView('admin')" style="background:#111;border-color:#111;color:white;">⚙️ Administrador</button>
+      <button class="nav-btn" onclick="showView('admin')" style="background:#6B7280;border-color:#6B7280;color:white;">⚙️ Administrador</button>
     </nav>
   </div>
 </header>
@@ -844,6 +919,29 @@
 
       <!-- TAB: Resultados -->
       <div class="admin-panel active" id="tab-dashboard">
+
+        <!-- Barra de sincronización -->
+        <div class="sync-bar" id="sync-bar">
+          <div class="sync-bar-left">
+            <span class="sync-dot" id="sync-dot"></span>
+            <span id="sync-label">Sin sincronizar</span>
+            <span class="sync-time" id="sync-time"></span>
+          </div>
+          <div class="sync-bar-right">
+            <label class="sync-auto-label">
+              <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh()" checked>
+              Auto (30s)
+            </label>
+            <button class="btn-refresh" id="btn-refresh-main" onclick="refreshResults()">
+              <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              Actualizar datos
+            </button>
+          </div>
+        </div>
+
         <div class="admin-status-row">
           <div class="left">
             <strong>Estado de la votación</strong>
@@ -855,18 +953,19 @@
             <span class="toggle-thumb"></span>
           </label>
         </div>
+
         <div class="stats-row" id="stats-row">
           <div class="stat-card"><div class="stat-n" id="stat-total">0</div><div class="stat-l">Votos emitidos</div></div>
           <div class="stat-card"><div class="stat-n" id="stat-students">0</div><div class="stat-l">Estudiantes</div></div>
           <div class="stat-card"><div class="stat-n" id="stat-pct">0%</div><div class="stat-l">Participación</div></div>
+          <div class="stat-card"><div class="stat-n" id="stat-last-vote" style="font-size:1rem;">—</div><div class="stat-l">Último voto</div></div>
         </div>
+
         <div class="panel-card">
           <h3>📊 Resultados en tiempo real</h3>
           <div id="results-bars"></div>
-          <div style="text-align:right; margin-top:0.75rem;">
-            <button class="btn-sm primary" onclick="refreshResults()">↻ Actualizar</button>
-          </div>
         </div>
+
       </div>
 
       <!-- TAB: Partidos -->
@@ -1220,6 +1319,9 @@ function loginAdmin() {
     document.getElementById('sheets-url-input').value = APP.sheetUrl;
     document.getElementById('voting-toggle').checked = APP.votingOpen;
     refreshResults();
+    // Iniciar auto-refresh
+    clearInterval(_autoRefreshTimer);
+    _autoRefreshTimer = setInterval(refreshResults, 30000);
     renderPartiesAdmin();
     renderStudentsTable();
   } else {
@@ -1230,14 +1332,65 @@ function loginAdmin() {
 // ═══════════════════════════════════════
 // RESULTADOS
 // ═══════════════════════════════════════
+// ── AUTO-REFRESH ──
+let _autoRefreshTimer = null;
+
+function toggleAutoRefresh() {
+  const on = document.getElementById('auto-refresh-toggle').checked;
+  clearInterval(_autoRefreshTimer);
+  if (on) _autoRefreshTimer = setInterval(refreshResults, 30000);
+}
+
+function setSyncState(state, msg, time) {
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const timeEl = document.getElementById('sync-time');
+  dot.className = 'sync-dot ' + state;
+  label.textContent = msg;
+  if (time) timeEl.textContent = time;
+}
+
+function formatSyncTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' });
+  } catch { return iso; }
+}
+
 async function refreshResults() {
-  let parties = APP.parties;
+  const btn = document.getElementById('btn-refresh-main');
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+  setSyncState('spin', 'Actualizando…', '');
+
+  let parties  = APP.parties;
   let students = APP.students;
+  let lastUpdate = null;
+  let fromSheet  = false;
 
   if (APP.sheetUrl) {
-    const r = await fetchFromSheet('results');
-    if (r && r.parties) parties = r.parties;
-    if (r && r.students) students = r.students;
+    try {
+      const r = await fetchFromSheet('results');
+      if (r && !r.error) {
+        if (r.parties  && r.parties.length)  { parties  = r.parties;  APP.parties  = parties; }
+        if (r.students && r.students.length) { students = r.students; APP.students = students; }
+        if (r.lastUpdate) lastUpdate = r.lastUpdate;
+        fromSheet = true;
+        save();
+      }
+    } catch(e) { /* usa datos locales */ }
+  }
+
+  if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
+
+  if (fromSheet && lastUpdate) {
+    setSyncState('ok', '✓ Sincronizado con Google Sheets', formatSyncTime(lastUpdate));
+  } else if (fromSheet) {
+    const now = new Date().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' });
+    setSyncState('ok', '✓ Sincronizado con Google Sheets', now);
+  } else if (APP.sheetUrl) {
+    setSyncState('err', '⚠ Sin conexión — mostrando datos locales', '');
+  } else {
+    setSyncState('local', 'Datos locales (sin Google Sheets configurado)', '');
   }
 
   const total = parties.reduce((s, p) => s + (p.votes || 0), 0);
@@ -1245,6 +1398,14 @@ async function refreshResults() {
   document.getElementById('stat-students').textContent = students.length;
   document.getElementById('stat-pct').textContent = students.length > 0
     ? Math.round((total / students.length) * 100) + '%' : '0%';
+
+  // Último voto (del sheet si hay datos de votos)
+  if (lastUpdate) {
+    document.getElementById('stat-last-vote').textContent = '';
+    document.getElementById('stat-last-vote').innerHTML =
+      '<span class="sheet-update-badge">📋 ' + formatSyncTime(lastUpdate) + '</span>';
+    document.getElementById('stat-last-vote').parentElement.querySelector('.stat-l').textContent = 'Última actualización Sheet';
+  }
 
   const barsEl = document.getElementById('results-bars');
   if (total === 0) {
@@ -1463,130 +1624,167 @@ function clearStudents() {
 // APPS SCRIPT — CÓDIGO PARA DESCARGAR
 // ═══════════════════════════════════════
 function downloadAppsScript() {
-  const code = `// ═══════════════════════════════════════════════════════════
-// APPS SCRIPT PARA SISTEMA DE VOTACIONES — COLEGIO CLARETIANO
-// Pegá este código en Extensions > Apps Script de tu Google Sheet
-// Luego implementá como "Aplicación web" con acceso "Cualquier persona"
-// ═══════════════════════════════════════════════════════════
-
-const SHEET_NAME_VOTES    = 'Votos';
-const SHEET_NAME_STUDENTS = 'Estudiantes';
-const SHEET_NAME_PARTIES  = 'Partidos';
-
-function doGet(e) {
-  const action = e.parameter.action;
-  try {
-    if (action === 'checkCode') return respond(checkCode(e.parameter.code));
-    if (action === 'results')   return respond(getResults());
-    return respond({ error: 'Acción no reconocida' });
-  } catch(err) {
-    return respond({ error: err.message });
-  }
-}
-
-function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  try {
-    if (data.action === 'vote')           return respond(registerVote(data));
-    if (data.action === 'updateStudents') return respond(updateStudents(data.students));
-    if (data.action === 'updateParties')  return respond(updateParties(data.parties));
-    return respond({ error: 'Acción no reconocida' });
-  } catch(err) {
-    return respond({ error: err.message });
-  }
-}
-
-function respond(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function getSheet(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
-    if (name === SHEET_NAME_VOTES)    sheet.appendRow(['Timestamp', 'Codigo', 'Partido']);
-    if (name === SHEET_NAME_STUDENTS) sheet.appendRow(['Nombre', 'Codigo', 'Votó']);
-    if (name === SHEET_NAME_PARTIES)  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);
-  }
-  return sheet;
-}
-
-function checkCode(code) {
-  const sheet = getSheet(SHEET_NAME_STUDENTS);
-  const data  = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][1] && data[i][1].toString().toUpperCase() === code.toUpperCase()) {
-      return { found: true, voted: data[i][2] === true || data[i][2] === 'TRUE', name: data[i][0], row: i + 1 };
-    }
-  }
-  return { found: false };
-}
-
-function registerVote(data) {
-  // 1. Verificar código
-  const check = checkCode(data.code);
-  if (!check.found) return { ok: false, error: 'Código no encontrado' };
-  if (check.voted)  return { ok: false, error: 'Ya votó' };
-
-  // 2. Registrar voto
-  const votesSheet = getSheet(SHEET_NAME_VOTES);
-  votesSheet.appendRow([data.timestamp, data.code, data.party]);
-
-  // 3. Marcar estudiante como "votó"
-  const studSheet = getSheet(SHEET_NAME_STUDENTS);
-  studSheet.getRange(check.row, 3).setValue(true);
-
-  // 4. Incrementar contador en Partidos
-  const partSheet = getSheet(SHEET_NAME_PARTIES);
-  const partData  = partSheet.getDataRange().getValues();
-  for (let i = 1; i < partData.length; i++) {
-    if (partData[i][0] === data.party) {
-      const currentVotes = parseInt(partData[i][5]) || 0;
-      partSheet.getRange(i + 1, 6).setValue(currentVotes + 1);
-      break;
-    }
-  }
-  return { ok: true };
-}
-
-function updateStudents(students) {
-  const sheet = getSheet(SHEET_NAME_STUDENTS);
-  sheet.clearContents();
-  sheet.appendRow(['Nombre', 'Codigo', 'Votó']);
-  students.forEach(s => sheet.appendRow([s.name, s.code, s.voted || false]));
-  return { ok: true };
-}
-
-function updateParties(parties) {
-  const sheet = getSheet(SHEET_NAME_PARTIES);
-  sheet.clearContents();
-  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);
-  parties.forEach(p => sheet.appendRow([p.name, p.candidate, p.slogan, p.color, p.emoji, p.votes || 0]));
-  return { ok: true };
-}
-
-function getResults() {
-  const partSheet = getSheet(SHEET_NAME_PARTIES);
-  const partData  = partSheet.getDataRange().getValues();
-  const parties = [];
-  for (let i = 1; i < partData.length; i++) {
-    if (partData[i][0]) parties.push({
-      name: partData[i][0], candidate: partData[i][1], slogan: partData[i][2],
-      color: partData[i][3], emoji: partData[i][4], votes: parseInt(partData[i][5]) || 0
-    });
-  }
-  const studSheet = getSheet(SHEET_NAME_STUDENTS);
-  const studData  = studSheet.getDataRange().getValues();
-  const students  = [];
-  for (let i = 1; i < studData.length; i++) {
-    if (studData[i][0]) students.push({ name: studData[i][0], code: studData[i][1], voted: studData[i][2] === true || studData[i][2] === 'TRUE' });
-  }
-  return { parties, students };
-}`;
-
+  const lines = [
+    '// ═══════════════════════════════════════════════════════════',
+    '// APPS SCRIPT — SISTEMA DE VOTACIONES COLEGIO CLARETIANO',
+    '// 1. Pegá este código en Extensiones > Apps Script de tu Google Sheet',
+    '// 2. Implementar > Nueva implementación > Aplicación web',
+    '//    - Ejecutar como: Yo',
+    '//    - Acceso: Cualquier persona',
+    '// 3. Copiá la URL y pegála en el panel de administración',
+    '// ═══════════════════════════════════════════════════════════',
+    '',
+    "const SHEET_VOTES    = 'Votos';",
+    "const SHEET_STUDENTS = 'Estudiantes';",
+    "const SHEET_PARTIES  = 'Partidos';",
+    "const SHEET_CONFIG   = 'Config';",
+    '',
+    'function respond(data) {',
+    '  return ContentService',
+    '    .createTextOutput(JSON.stringify(data))',
+    '    .setMimeType(ContentService.MimeType.JSON);',
+    '}',
+    '',
+    'function getSheet(name) {',
+    '  const ss = SpreadsheetApp.getActiveSpreadsheet();',
+    '  let sheet = ss.getSheetByName(name);',
+    '  if (!sheet) {',
+    '    sheet = ss.insertSheet(name);',
+    "    if (name === SHEET_VOTES)    sheet.appendRow(['Timestamp', 'Codigo', 'Partido', 'Nombre']);",
+    "    if (name === SHEET_STUDENTS) sheet.appendRow(['Nombre', 'Codigo', 'Voto', 'Timestamp Voto']);",
+    "    if (name === SHEET_PARTIES)  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);",
+    "    if (name === SHEET_CONFIG)   sheet.appendRow(['Clave', 'Valor']);",
+    '  }',
+    '  return sheet;',
+    '}',
+    '',
+    'function setLastUpdate(ts) {',
+    '  const sheet = getSheet(SHEET_CONFIG);',
+    '  const data  = sheet.getDataRange().getValues();',
+    '  for (let i = 1; i < data.length; i++) {',
+    "    if (data[i][0] === 'lastUpdate') { sheet.getRange(i+1,2).setValue(ts); return; }",
+    '  }',
+    "  sheet.appendRow(['lastUpdate', ts]);",
+    '}',
+    '',
+    'function getLastUpdate() {',
+    '  const sheet = getSheet(SHEET_CONFIG);',
+    '  const data  = sheet.getDataRange().getValues();',
+    '  for (let i = 1; i < data.length; i++) {',
+    "    if (data[i][0] === 'lastUpdate') return data[i][1] ? data[i][1].toString() : null;",
+    '  }',
+    '  return null;',
+    '}',
+    '',
+    'function doGet(e) {',
+    '  const action = e.parameter.action;',
+    '  try {',
+    "    if (action === 'checkCode') return respond(checkCode(e.parameter.code));",
+    "    if (action === 'results')   return respond(getResults());",
+    "    return respond({ error: 'Accion no reconocida' });",
+    '  } catch(err) { return respond({ error: err.message }); }',
+    '}',
+    '',
+    'function doPost(e) {',
+    '  const data = JSON.parse(e.postData.contents);',
+    '  try {',
+    "    if (data.action === 'vote')           return respond(registerVote(data));",
+    "    if (data.action === 'updateStudents') return respond(updateStudents(data.students));",
+    "    if (data.action === 'updateParties')  return respond(updateParties(data.parties));",
+    "    return respond({ error: 'Accion no reconocida' });",
+    '  } catch(err) { return respond({ error: err.message }); }',
+    '}',
+    '',
+    'function checkCode(code) {',
+    '  const sheet = getSheet(SHEET_STUDENTS);',
+    '  const data  = sheet.getDataRange().getValues();',
+    '  for (let i = 1; i < data.length; i++) {',
+    '    if (data[i][1] && data[i][1].toString().toUpperCase() === code.toUpperCase()) {',
+    "      return { found: true, voted: data[i][2] === true || data[i][2] === 'TRUE', name: data[i][0], row: i+1 };",
+    '    }',
+    '  }',
+    '  return { found: false };',
+    '}',
+    '',
+    'function registerVote(data) {',
+    '  const check = checkCode(data.code);',
+    "  if (!check.found) return { ok: false, error: 'Codigo no encontrado' };",
+    "  if (check.voted)  return { ok: false, error: 'Ya voto' };",
+    '  const now = new Date().toISOString();',
+    '  // 1. Registrar en hoja Votos',
+    '  getSheet(SHEET_VOTES).appendRow([now, data.code, data.party, check.name]);',
+    '  // 2. Marcar estudiante',
+    '  const studSheet = getSheet(SHEET_STUDENTS);',
+    '  studSheet.getRange(check.row, 3).setValue(true);',
+    '  studSheet.getRange(check.row, 4).setValue(now);',
+    '  // 3. Incrementar contador partido',
+    '  const partSheet = getSheet(SHEET_PARTIES);',
+    '  const partData  = partSheet.getDataRange().getValues();',
+    '  for (let i = 1; i < partData.length; i++) {',
+    '    if (partData[i][0] === data.party) {',
+    '      partSheet.getRange(i+1, 6).setValue((parseInt(partData[i][5]) || 0) + 1);',
+    '      break;',
+    '    }',
+    '  }',
+    '  // 4. Guardar timestamp de ultima actualizacion',
+    '  setLastUpdate(now);',
+    '  return { ok: true, timestamp: now };',
+    '}',
+    '',
+    'function updateStudents(students) {',
+    '  const sheet = getSheet(SHEET_STUDENTS);',
+    '  sheet.clearContents();',
+    "  sheet.appendRow(['Nombre', 'Codigo', 'Voto', 'Timestamp Voto']);",
+    "  students.forEach(s => sheet.appendRow([s.name, s.code, s.voted || false, s.voteTime || '']));",
+    '  const now = new Date().toISOString();',
+    '  setLastUpdate(now);',
+    '  return { ok: true, timestamp: now };',
+    '}',
+    '',
+    'function updateParties(parties) {',
+    '  const sheet = getSheet(SHEET_PARTIES);',
+    '  sheet.clearContents();',
+    "  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);",
+    '  parties.forEach(p => sheet.appendRow([p.name, p.candidate, p.slogan, p.color, p.emoji, p.votes || 0]));',
+    '  const now = new Date().toISOString();',
+    '  setLastUpdate(now);',
+    '  return { ok: true, timestamp: now };',
+    '}',
+    '',
+    'function getResults() {',
+    '  // Partidos',
+    '  const partData = getSheet(SHEET_PARTIES).getDataRange().getValues();',
+    '  const parties  = [];',
+    '  for (let i = 1; i < partData.length; i++) {',
+    '    if (partData[i][0]) parties.push({',
+    '      name: partData[i][0], candidate: partData[i][1], slogan: partData[i][2],',
+    '      color: partData[i][3], emoji: partData[i][4], votes: parseInt(partData[i][5]) || 0',
+    '    });',
+    '  }',
+    '  // Estudiantes',
+    '  const studData = getSheet(SHEET_STUDENTS).getDataRange().getValues();',
+    '  const students = [];',
+    '  for (let i = 1; i < studData.length; i++) {',
+    '    if (studData[i][0]) students.push({',
+    '      name: studData[i][0], code: studData[i][1],',
+    "      voted: studData[i][2] === true || studData[i][2] === 'TRUE',",
+    '      voteTime: studData[i][3] ? studData[i][3].toString() : null',
+    '    });',
+    '  }',
+    '  // Ultimo voto real (ultima fila de Votos)',
+    '  const votesSheet = getSheet(SHEET_VOTES);',
+    '  const lastRow    = votesSheet.getLastRow();',
+    '  let lastVoteTime = null;',
+    '  if (lastRow > 1) {',
+    '    const v = votesSheet.getRange(lastRow, 1).getValue();',
+    '    if (v) lastVoteTime = v.toString();',
+    '  }',
+    '  // Fecha de ultima actualizacion guardada en Config',
+    '  const lastUpdate = getLastUpdate();',
+    '  return { parties, students, lastUpdate: lastUpdate || lastVoteTime, lastVoteTime };',
+    '}',
+  ];
+  const code = lines.join('\n');
   const blob = new Blob([code], { type: 'text/javascript' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
