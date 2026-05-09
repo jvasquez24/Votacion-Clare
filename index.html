@@ -181,8 +181,9 @@
   .btn-primary:disabled { background: #aaa; cursor: not-allowed; transform: none; }
   .btn-full { width: 100%; }
   .msg { font-size: 0.85rem; padding: 0.6rem 0.9rem; border-radius: 6px; margin-top: 0.75rem; }
-  .msg-error { background: var(--danger-bg); color: var(--danger); }
+  .msg-error   { background: var(--danger-bg); color: var(--danger); }
   .msg-success { background: var(--success-bg); color: var(--success); }
+  .msg-info    { background: #EEF2FF; color: var(--cr-azul); }
 
   /* Ballot */
   .ballot-header {
@@ -820,7 +821,7 @@
         <h2>Ingresá tu código</h2>
         <p>Usá el código único que te entregaron para emitir tu voto. Solo podés votar una vez.</p>
         <div class="code-input">
-          <input type="text" id="voter-code-input" placeholder="Ej: EST-2025-001" maxlength="20">
+          <input type="text" id="voter-code-input" placeholder="Ej: EST-2025-001" maxlength="20" onkeypress="if(event.key==='Enter') loginVoter()" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
           <button class="btn-primary" onclick="loginVoter()">Entrar</button>
         </div>
         <div id="login-msg"></div>
@@ -1234,29 +1235,95 @@ async function fetchFromSheet(action, params = {}) {
 // LOGIN VOTANTE
 // ═══════════════════════════════════════
 async function loginVoter() {
-  const code = document.getElementById('voter-code-input').value.trim().toUpperCase();
+  const input = document.getElementById('voter-code-input');
+  const code  = input.value.trim().toUpperCase();
   const msgEl = document.getElementById('login-msg');
+  const btn   = document.querySelector('#voter-login .btn-primary');
 
-  if (!code) { showMsg(msgEl, 'Ingresá tu código', 'error'); return; }
-  if (!APP.votingOpen) { showMsg(msgEl, '⏸ La votación está cerrada en este momento.', 'error'); return; }
-
-  // Buscar en lista local primero
-  let student = APP.students.find(s => s.code.toUpperCase() === code);
-
-  // Si hay sheet URL, verificar remotamente
-  if (APP.sheetUrl) {
-    const r = await fetchFromSheet('checkCode', { code });
-    if (r) {
-      if (!r.found) { showMsg(msgEl, '❌ Código inválido. Revisá que esté bien escrito.', 'error'); return; }
-      if (r.voted) { showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo podés votar una vez.', 'error'); return; }
-      student = r;
-    }
-  } else {
-    if (!student) { showMsg(msgEl, '❌ Código inválido. Revisá que esté bien escrito.', 'error'); return; }
-    if (student.voted) { showMsg(msgEl, '⚠️ Este código ya fue utilizado.', 'error'); return; }
+  // ── Validaciones básicas ──────────────────────────────
+  if (!code) {
+    showMsg(msgEl, '⚠️ Por favor ingresá tu código antes de continuar.', 'error');
+    input.focus();
+    return;
   }
 
-  APP.currentVoter = student || { name: 'Estudiante', code };
+  // Formato mínimo: al menos 3 caracteres
+  if (code.length < 3) {
+    showMsg(msgEl, '❌ El código es demasiado corto. Revisá que esté completo.', 'error');
+    input.focus();
+    return;
+  }
+
+  if (!APP.votingOpen) {
+    showMsg(msgEl, '⏸ La votación está cerrada en este momento. Consultá con la dirección.', 'error');
+    return;
+  }
+
+  if (!APP.parties.length) {
+    showMsg(msgEl, '⚠️ No hay partidos registrados. Contactá al administrador.', 'error');
+    return;
+  }
+
+  // ── Estado: verificando ───────────────────────────────
+  btn.disabled = true;
+  btn.textContent = 'Verificando…';
+  showMsg(msgEl, '🔍 Verificando código...', 'info');
+
+  let student  = null;
+  let fromSheet = false;
+
+  // ── 1. Verificar contra Google Sheets (si está configurado) ──
+  if (APP.sheetUrl) {
+    try {
+      const r = await fetchFromSheet('checkCode', { code });
+      if (r && !r.error) {
+        fromSheet = true;
+        if (!r.found) {
+          btn.disabled = false; btn.textContent = 'Entrar';
+          showMsg(msgEl, '❌ Código no encontrado. Revisá que esté bien escrito o consultá con la dirección.', 'error');
+          input.select();
+          return;
+        }
+        if (r.voted) {
+          btn.disabled = false; btn.textContent = 'Entrar';
+          showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo se puede votar una vez.', 'error');
+          return;
+        }
+        student = { name: r.name || 'Estudiante', code, voted: false };
+      }
+      // Si r.error o no hay respuesta útil → caer a validación local
+    } catch(e) {
+      // Sin conexión → caer a validación local
+    }
+  }
+
+  // ── 2. Verificar en lista local (si no vino del sheet) ──
+  if (!fromSheet) {
+    if (APP.students.length === 0) {
+      // No hay lista cargada y no hay sheet → advertir pero dejar pasar (modo demo)
+      student = { name: 'Estudiante', code, voted: false };
+    } else {
+      const found = APP.students.find(s => s.code.toUpperCase() === code);
+      if (!found) {
+        btn.disabled = false; btn.textContent = 'Entrar';
+        showMsg(msgEl, '❌ Código no válido. Revisá que esté escrito correctamente.', 'error');
+        input.select();
+        return;
+      }
+      if (found.voted) {
+        btn.disabled = false; btn.textContent = 'Entrar';
+        showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo podés votar una vez.', 'error');
+        return;
+      }
+      student = found;
+    }
+  }
+
+  // ── 3. Todo OK → mostrar papeleta ────────────────────
+  btn.disabled = false; btn.textContent = 'Entrar';
+  msgEl.textContent = ''; msgEl.className = '';
+
+  APP.currentVoter = student;
   APP.selectedPartyIdx = -1;
 
   document.getElementById('voter-login').style.display = 'none';
@@ -1932,7 +1999,7 @@ function downloadAppsScript() {
 // ═══════════════════════════════════════
 function showMsg(el, text, type) {
   el.textContent = text;
-  el.className = 'msg msg-' + type;
+  el.className = 'msg msg-' + (type || 'info');
 }
 
 let toastTimer;
