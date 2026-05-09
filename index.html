@@ -35,6 +35,7 @@
     min-height: 100vh;
   }
 
+  /* ── HEADER ── */
   .header {
     background: #111111;
     color: white;
@@ -62,6 +63,14 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+  }
+  .escudo {
+    width: 52px; height: 52px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
   }
   .header h1 {
     font-family: 'Playfair Display', serif;
@@ -97,15 +106,18 @@
   .nav-btn:hover { background: rgba(255,255,255,0.2); }
   .nav-btn.active { background: var(--gold); border-color: var(--gold); color: var(--cr-azul); font-weight: 600; }
 
+  /* ── VISTAS ── */
   .view { display: none; }
   .view.active { display: block; }
 
+  /* ── PANTALLA DE VOTANTE ── */
   .voter-wrap {
     max-width: 720px;
     margin: 0 auto;
     padding: 2.5rem 1.5rem;
   }
 
+  /* Login */
   .login-card {
     background: white;
     border: 1px solid var(--border);
@@ -116,15 +128,14 @@
     max-width: 420px;
     margin: 3rem auto;
   }
-  
-  .logo-colegio {
-    width: 100px;
-    height: auto;
-    margin: 0 auto 1.5rem;
-    display: block;
+  .login-card .icon-circle {
+    width: 72px; height: 72px;
+    background: var(--cr-azul);
     border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 32px;
   }
-  
   .login-card h2 {
     font-family: 'Playfair Display', serif;
     font-size: 1.6rem;
@@ -174,6 +185,7 @@
   .msg-success { background: var(--success-bg); color: var(--success); }
   .msg-info    { background: #EEF2FF; color: var(--cr-azul); }
 
+  /* Ballot */
   .ballot-header {
     text-align: center;
     margin-bottom: 2.5rem;
@@ -238,15 +250,6 @@
     color: white; font-size: 14px;
   }
   .party-card.selected .check-badge { display: flex; }
-  .party-image {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 50%;
-    margin: 0 auto 0.75rem;
-    display: block;
-    border: 3px solid var(--cr-azul);
-  }
   .party-color-dot {
     width: 56px; height: 56px;
     border-radius: 50%;
@@ -282,6 +285,7 @@
   }
   .vote-action p { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem; }
 
+  /* Confirmación */
   .confirm-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.5);
@@ -328,6 +332,7 @@
   .btn-danger { background: var(--cr-rojo) !important; }
   .btn-danger:hover { background: #a80d1f !important; }
 
+  /* Éxito voto */
   .vote-success {
     background: white;
     border-radius: 16px;
@@ -348,6 +353,7 @@
   .vote-success h2 { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--success); margin-bottom: 0.5rem; }
   .vote-success p { color: var(--text-muted); line-height: 1.6; }
 
+  /* ── PANEL ADMIN ── */
   .admin-wrap {
     max-width: 1050px;
     margin: 0 auto;
@@ -427,6 +433,7 @@
     letter-spacing: 0.06em;
   }
 
+  /* Barras de resultados */
   .result-row {
     margin-bottom: 1.25rem;
   }
@@ -444,6 +451,7 @@
   }
   .result-bar { height: 100%; border-radius: 100px; transition: width 0.8s ease; }
 
+  /* Form elements admin */
   .form-group { margin-bottom: 1.25rem; }
   .form-group label {
     display: block;
@@ -470,6 +478,7 @@
     border-color: var(--cr-azul);
   }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 
   .parties-list { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
   .party-admin-card {
@@ -481,9 +490,6 @@
   }
   .party-admin-card .party-admin-top {
     display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;
-  }
-  .party-admin-card .party-admin-top img {
-    width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border);
   }
   .color-preview {
     width: 36px; height: 36px;
@@ -618,6 +624,7 @@
   }
   .empty-state .big { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
+  /* Botón toggle admin */
   .admin-status-row {
     display: flex;
     align-items: center;
@@ -654,6 +661,23 @@
   }
   .toggle input:checked ~ .toggle-thumb { transform: translateX(22px); }
 
+  .loading-dots::after {
+    content: '...';
+    animation: dots 1.2s steps(3, end) infinite;
+  }
+  @keyframes dots {
+    0%, 100% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+  }
+
+  @media (max-width: 600px) {
+    .form-row, .form-row-3 { grid-template-columns: 1fr; }
+    .header-inner { flex-direction: column; align-items: flex-start; }
+    .parties-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── SYNC BAR ── */
   .sync-bar {
     display: flex;
     align-items: center;
@@ -713,23 +737,63 @@
   }
   .btn-refresh:hover { background: #001f60; transform: translateY(-1px); }
   .btn-refresh:disabled { background: #aaa; cursor: not-allowed; transform: none; }
+  .btn-refresh svg { transition: transform 0.6s; }
   .btn-refresh.spinning svg { animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sheet-update-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.75rem;
+    background: var(--success-bg);
+    color: var(--success);
+    padding: 0.2rem 0.6rem;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+
+
+  /* ── IMG UPLOAD ── */
+  .img-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    text-align: center;
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .img-upload-area:hover { border-color: var(--cr-azul); background: #EEF2FF; }
+  .img-upload-placeholder {
+    display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+    color: var(--text-muted);
+  }
+  .img-upload-placeholder span { font-size: 0.88rem; }
+  .img-upload-placeholder small { font-size: 0.75rem; }
+
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <header class="header">
   <div class="header-inner">
     <div class="header-brand">
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
           <rect width="44" height="44" rx="10" fill="rgba(255,255,255,0.15)"/>
+          <!-- Urna / caja de votación -->
           <rect x="10" y="22" width="24" height="16" rx="2" fill="white" opacity="0.9"/>
           <rect x="8" y="18" width="28" height="6" rx="2" fill="#F5C400"/>
+          <!-- Ranura -->
           <rect x="18" y="20" width="8" height="2" rx="1" fill="#1A3A8F"/>
+          <!-- Papeleta entrando -->
           <rect x="17" y="8" width="10" height="13" rx="1.5" fill="white" opacity="0.85"/>
           <line x1="20" y1="12" x2="27" y2="12" stroke="#C8181E" stroke-width="1.5" stroke-linecap="round"/>
           <line x1="20" y1="15" x2="25" y2="15" stroke="#C8181E" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Checkmark en urna -->
           <polyline points="16,31 20,35 28,27" stroke="#1A3A8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       <h1>
@@ -739,115 +803,182 @@
     </div>
     <nav class="header-nav">
       <button class="nav-btn active" onclick="showView('voter')">🗳️ Votar</button>
-      <button class="nav-btn" onclick="showView('admin')">⚙️ Administrador</button>
+      <button class="nav-btn" onclick="showView('admin')" style="background:#6B7280;border-color:#6B7280;color:white;">⚙️ Administrador</button>
     </nav>
   </div>
 </header>
 
-<!-- VISTA VOTANTE -->
+<!-- ═══════════════════════════════════════
+     VISTA VOTANTE
+═══════════════════════════════════════ -->
 <div id="view-voter" class="view active">
   <div class="voter-wrap">
+
+    <!-- Login de código -->
     <div id="voter-login">
       <div class="login-card">
-        <img src="img/escudo-colegio.jpg" alt="Escudo Colegio Claretiano" class="logo-colegio" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231A3A8F%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2240%22%3E🏫%3C/text%3E%3C/svg%3E'">
+        <img src="data:image/jpeg;base64,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" alt="Escudo Colegio Claretiano" style="height:88px;width:auto;margin:0 auto 1.25rem;display:block;">
         <h2>Ingresá tu código</h2>
-        <p>Usá el código único que te entregaron para emitir tu voto.</p>
+        <p>Usá el código único que te entregaron para emitir tu voto. Solo podés votar una vez.</p>
         <div class="code-input">
-          <input type="text" id="voter-code-input" placeholder="Ej: EST-2025-001" maxlength="20" onkeypress="if(event.key==='Enter') loginVoter()">
+          <input type="text" id="voter-code-input" placeholder="Ej: EST-2025-001" maxlength="20" onkeypress="if(event.key==='Enter') loginVoter()" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
           <button class="btn-primary" onclick="loginVoter()">Entrar</button>
         </div>
         <div id="login-msg"></div>
         <p style="font-size:0.75rem; color:var(--text-muted); margin-top:1rem;">
-          Sin código? Consultá con dirección del colegio.
+          Si no tenés tu código, consultá con la dirección del colegio.
         </p>
       </div>
     </div>
 
+    <!-- Papeleta de votación -->
     <div id="voter-ballot" style="display:none;">
       <div class="ballot-header">
-        <div class="welcome-tag" id="voter-welcome-tag">Bienvenido/a</div>
+        <div class="welcome-tag" id="voter-welcome-tag">Bienvenido/a, Estudiante</div>
         <h2>Elegí tu candidato/a</h2>
-        <p>Seleccioná tu opción preferida y confirmá tu voto.</p>
+        <p>Seleccioná el partido de tu preferencia y confirmá tu voto. Esta acción no se puede deshacer.</p>
       </div>
       <div class="parties-grid" id="ballot-parties-grid"></div>
       <div class="vote-action">
         <p id="vote-hint">Seleccioná un partido para continuar</p>
-        <button class="btn-primary btn-full" id="btn-vote" disabled onclick="openConfirm()">Emitir voto →</button>
+        <button class="btn-primary btn-full" id="btn-vote" disabled onclick="openConfirm()">
+          Emitir voto →
+        </button>
       </div>
     </div>
 
+    <!-- Confirmación modal -->
     <div class="confirm-overlay" id="confirm-overlay">
       <div class="confirm-box">
         <div class="big-icon">⚠️</div>
         <h3>¿Confirmás tu voto?</h3>
-        <p>Una vez confirmado, no podrás cambiar tu voto.</p>
+        <p>Una vez confirmado, no podrás cambiar tu voto. Esta acción es definitiva.</p>
         <div class="selected-party-preview" id="confirm-preview"></div>
         <div class="btns">
           <button class="btn-ghost" onclick="closeConfirm()">Cancelar</button>
-          <button class="btn-primary btn-danger" onclick="submitVote()">Sí, confirmar</button>
+          <button class="btn-primary btn-danger" id="btn-confirm-vote" onclick="submitVote()">
+            Sí, confirmar
+          </button>
         </div>
       </div>
     </div>
 
+    <!-- Éxito -->
     <div class="vote-success" id="vote-success">
       <div class="success-icon">✅</div>
       <h2>¡Voto registrado!</h2>
-      <p>Gracias por participar en la democracia estudiantil.</p>
-      <button class="btn-ghost" onclick="resetVoterView()">Volver al inicio</button>
+      <p>Tu voto fue emitido exitosamente. Gracias por participar en la democracia estudiantil del Colegio Claretiano.</p>
+      <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-muted)">
+        Los resultados serán anunciados al finalizar el período de votación.
+      </p>
+      <div style="margin-top:2rem;">
+        <div style="display:inline-flex;align-items:center;gap:0.75rem;background:var(--surface2);padding:0.75rem 1.5rem;border-radius:100px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span style="font-size:0.85rem;color:var(--text-muted);">Volviendo al inicio en <strong id="countdown-num" style="color:var(--cr-azul);">5</strong> segundos...</span>
+        </div>
+        <div style="margin-top:1rem;">
+          <button class="btn-ghost" style="font-size:0.85rem;padding:0.5rem 1.25rem;" onclick="resetVoterView()">Volver ahora →</button>
+        </div>
+      </div>
     </div>
+
   </div>
 </div>
 
-<!-- PANEL ADMINISTRADOR -->
+<!-- ═══════════════════════════════════════
+     PANEL ADMINISTRADOR
+═══════════════════════════════════════ -->
 <div id="view-admin" class="view">
   <div class="admin-wrap">
+
+    <!-- Login admin -->
     <div id="admin-login" class="admin-login-wrap">
       <div class="login-card">
         <div class="icon-circle">🔐</div>
         <h2>Panel Admin</h2>
+        <p>Acceso restringido al equipo organizador.</p>
         <div class="form-group">
-          <label>Contraseña</label>
+          <label>Contraseña de administrador</label>
           <input type="password" id="admin-pwd-input" placeholder="Contraseña" onkeypress="if(event.key==='Enter') loginAdmin()">
         </div>
         <button class="btn-primary btn-full" onclick="loginAdmin()">Ingresar</button>
         <div id="admin-login-msg"></div>
-        <p style="font-size:0.75rem; margin-top:1rem;">Contraseña: <code>admin123</code></p>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:1rem;">Contraseña por defecto: <code>admin123</code> (cambiala luego)</p>
       </div>
     </div>
 
+    <!-- Dashboard admin -->
     <div id="admin-dashboard" style="display:none;">
+
+      <!-- Config Google Sheets -->
       <div class="sheets-config">
-        <h4>📊 Configuración</h4>
-        <p>Configuración de Google Sheets (opcional)</p>
-        <div class="form-row">
-          <div class="form-group">
-            <label>URL del Apps Script</label>
-            <input type="url" id="sheets-url-input" placeholder="https://script.google.com/...">
+        <h4>📊 Configuración de Google Sheets (Base de datos)</h4>
+        <p>Pegá la URL de tu Google Apps Script aquí. Los votos y estudiantes se guardarán en tu Google Sheet.</p>
+        <div class="form-row" style="align-items:flex-end; gap:0.75rem;">
+          <div class="form-group" style="margin-bottom:0; flex:1;">
+            <label>URL del Apps Script Web App</label>
+            <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/..." value="">
           </div>
-          <button class="btn-primary" onclick="saveSheetUrl()">Guardar</button>
+          <button class="btn-primary" style="height:40px; white-space:nowrap;" onclick="saveSheetUrl()">Guardar URL</button>
         </div>
+        <ul class="step-list" style="margin-top:1rem;">
+          <li>Ve a <a href="https://sheets.google.com" target="_blank" style="color:var(--cr-azul)">Google Sheets</a> y creá una hoja nueva</li>
+          <li>Abrí <span class="code-inline">Extensiones → Apps Script</span></li>
+          <li>Pegá el código del Apps Script (incluido abajo como descarga) y hacé clic en Implementar → Nueva implementación</li>
+          <li>Elegí tipo <span class="code-inline">Aplicación web</span>, ejecutar como <span class="code-inline">yo</span>, acceso <span class="code-inline">Cualquier persona</span></li>
+          <li>Copiá la URL generada y pegala arriba</li>
+        </ul>
+        <button class="btn-sm primary" style="margin-top:0.75rem;" onclick="downloadAppsScript()">⬇ Descargar código Apps Script</button>
       </div>
 
-      <div class="admin-tabs">
-        <button class="admin-tab active" onclick="showAdminTab('dashboard')">📊 Resultados</button>
-        <button class="admin-tab" onclick="showAdminTab('parties')">🏛️ Partidos</button>
-        <button class="admin-tab" onclick="showAdminTab('students')">👥 Estudiantes</button>
-        <button class="admin-tab" onclick="showAdminTab('settings')">⚙️ Ajustes</button>
+      <!-- Tabs -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+        <div class="admin-tabs" style="margin-bottom:0;">
+          <button class="admin-tab active" onclick="showAdminTab('dashboard')">📊 Resultados</button>
+          <button class="admin-tab" onclick="showAdminTab('parties')">🏛️ Partidos</button>
+          <button class="admin-tab" onclick="showAdminTab('students')">👥 Estudiantes</button>
+          <button class="admin-tab" onclick="showAdminTab('settings')">⚙️ Ajustes</button>
+        </div>
+        <button onclick="logoutAdmin()" style="
+          display:flex; align-items:center; gap:0.45rem;
+          background:white; border:1.5px solid #E5E7EB; color:#6B7280;
+          padding:0.45rem 1rem; border-radius:8px;
+          font-family:'DM Sans',sans-serif; font-size:0.83rem;
+          cursor:pointer; transition:all 0.2s;
+          " onmouseover="this.style.borderColor='#C8181E';this.style.color='#C8181E';"
+            onmouseout="this.style.borderColor='#E5E7EB';this.style.color='#6B7280';">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Cerrar sesión
+        </button>
       </div>
 
+      <!-- TAB: Resultados -->
       <div class="admin-panel active" id="tab-dashboard">
-        <div class="sync-bar">
+
+        <!-- Barra de sincronización -->
+        <div class="sync-bar" id="sync-bar">
           <div class="sync-bar-left">
             <span class="sync-dot" id="sync-dot"></span>
-            <span id="sync-label">Datos locales</span>
+            <span id="sync-label">Sin sincronizar</span>
+            <span class="sync-time" id="sync-time"></span>
           </div>
           <div class="sync-bar-right">
-            <button class="btn-refresh" onclick="refreshResults()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <label class="sync-auto-label">
+              <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh()" checked>
+              Auto (30s)
+            </label>
+            <button class="btn-refresh" id="btn-refresh-main" onclick="refreshResults()">
+              <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
               </svg>
-              Actualizar
+              Actualizar datos
             </button>
           </div>
         </div>
@@ -864,223 +995,380 @@
           </label>
         </div>
 
-        <div class="stats-row">
+        <div class="stats-row" id="stats-row">
           <div class="stat-card"><div class="stat-n" id="stat-total">0</div><div class="stat-l">Votos emitidos</div></div>
           <div class="stat-card"><div class="stat-n" id="stat-students">0</div><div class="stat-l">Estudiantes</div></div>
           <div class="stat-card"><div class="stat-n" id="stat-pct">0%</div><div class="stat-l">Participación</div></div>
+          <div class="stat-card"><div class="stat-n" id="stat-last-vote" style="font-size:1rem;">—</div><div class="stat-l">Último voto</div></div>
         </div>
 
         <div class="panel-card">
-          <h3>📊 Resultados</h3>
+          <h3>📊 Resultados en tiempo real</h3>
           <div id="results-bars"></div>
         </div>
+
       </div>
 
+      <!-- TAB: Partidos -->
       <div class="admin-panel" id="tab-parties">
         <div class="panel-card">
-          <h3>🏛️ Partidos</h3>
+          <h3>🏛️ Partidos registrados</h3>
           <div class="parties-list" id="admin-parties-list"></div>
           <button class="btn-primary" onclick="openPartyForm()">+ Agregar partido</button>
         </div>
+        <!-- Formulario partido -->
         <div class="panel-card" id="party-form-card" style="display:none;">
-          <h3 id="party-form-title">Nuevo partido</h3>
+          <h3 id="party-form-title">➕ Nuevo partido</h3>
+          <input type="hidden" id="edit-party-idx" value="-1">
+
+          <!-- Imagen del partido -->
           <div class="form-group">
-            <label>URL de la imagen (opcional)</label>
-            <input type="text" id="pf-image-url" placeholder="img/partido-nombre.jpg">
-            <small style="color:var(--text-muted);">Pon la ruta de la imagen en la carpeta img/</small>
+            <label>Imagen del partido (logo / foto del candidato)</label>
+            <div class="img-upload-area" id="img-upload-area" onclick="document.getElementById('pf-img-input').click()">
+              <div id="img-preview-wrap">
+                <div class="img-upload-placeholder" id="img-placeholder">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <span>Hacé clic para subir imagen</span>
+                  <small>JPG, PNG, GIF — máx 2MB</small>
+                </div>
+                <img id="img-preview" src="" alt="Preview" style="display:none;max-height:160px;max-width:100%;border-radius:8px;object-fit:contain;">
+              </div>
+              <input type="file" id="pf-img-input" accept="image/*" style="display:none;" onchange="previewPartyImage(event)">
+            </div>
+            <div style="margin-top:0.5rem;display:flex;gap:0.5rem;align-items:center;">
+              <button class="btn-sm" type="button" onclick="clearPartyImage()">✕ Quitar imagen</button>
+              <span style="font-size:0.75rem;color:var(--text-muted);" id="img-filename"></span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre del partido</label>
+              <input type="text" id="pf-name" placeholder="Partido Unido">
+            </div>
+            <div class="form-group">
+              <label>Candidato/a</label>
+              <input type="text" id="pf-candidate" placeholder="María García">
+            </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Nombre</label><input type="text" id="pf-name"></div>
-            <div class="form-group"><label>Candidato/a</label><input type="text" id="pf-candidate"></div>
+            <div class="form-group">
+              <label>Vicecandidato/a</label>
+              <input type="text" id="pf-vicecandidate" placeholder="Carlos López">
+            </div>
+            <div class="form-group">
+              <label>Eslogan</label>
+              <input type="text" id="pf-slogan" placeholder="Juntos construimos el futuro">
+            </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Vicecandidato/a</label><input type="text" id="pf-vicecandidate"></div>
-            <div class="form-group"><label>Eslogan</label><input type="text" id="pf-slogan"></div>
+            <div class="form-group">
+              <label>Color representativo</label>
+              <input type="color" id="pf-color" value="#002B7F">
+            </div>
+            <div class="form-group">
+              <label>Emoji / ícono</label>
+              <input type="text" id="pf-emoji" placeholder="🌟" maxlength="4" style="width:80px;">
+            </div>
           </div>
-          <div class="form-row">
-            <div class="form-group"><label>Color</label><input type="color" id="pf-color" value="#1A3A8F"></div>
-            <div class="form-group"><label>Emoji</label><input type="text" id="pf-emoji" placeholder="🌟"></div>
+          <div class="form-group">
+            <label>Descripción / propuesta breve</label>
+            <textarea id="pf-description" placeholder="Breve descripción del plan de gobierno estudiantil..." style="min-height:70px;resize:vertical;"></textarea>
           </div>
-          <div class="form-group"><label>Descripción</label><textarea id="pf-description" rows="2"></textarea></div>
           <div style="display:flex; gap:0.75rem;">
-            <button class="btn-primary" onclick="saveParty()">Guardar</button>
+            <button class="btn-primary" onclick="saveParty()">Guardar partido</button>
             <button class="btn-ghost" onclick="cancelPartyForm()">Cancelar</button>
           </div>
         </div>
       </div>
 
+      <!-- TAB: Estudiantes -->
       <div class="admin-panel" id="tab-students">
         <div class="panel-card">
-          <h3>📋 Cargar estudiantes</h3>
+          <h3>📋 Cargar lista de estudiantes</h3>
           <div class="form-group">
-            <label>Lista (Nombre,Código por línea)</label>
-            <textarea class="textarea-upload" id="students-bulk-input" placeholder="Juan Pérez,EST-001&#10;Ana López,EST-002"></textarea>
+            <label>Pegar lista (una por línea: Nombre,Código)</label>
+            <textarea class="textarea-upload" id="students-bulk-input" placeholder="Juan Pérez,EST-001&#10;Ana López,EST-002&#10;Carlos Mora,EST-003"></textarea>
+            <div class="upload-hint">Formato: <code>Nombre Completo,CODIGO-UNICO</code> — Una por línea. Si no ponés código, se genera automáticamente.</div>
           </div>
-          <button class="btn-primary" onclick="bulkAddStudents()">Cargar</button>
-          <button class="btn-sm" onclick="generateCodesExample()">Ejemplo</button>
+          <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <button class="btn-primary" onclick="bulkAddStudents()">Cargar estudiantes</button>
+            <button class="btn-sm" onclick="generateCodesExample()">Ver ejemplo</button>
+            <button class="btn-sm" onclick="exportStudentCodes()">⬇ Exportar códigos</button>
+          </div>
         </div>
         <div class="panel-card">
-          <h3>👥 Estudiantes (<span id="students-count">0</span>)</h3>
+          <h3>👥 Lista de estudiantes (<span id="students-count">0</span>)</h3>
+          <div style="margin-bottom:0.75rem;">
+            <input type="text" id="student-search" placeholder="Buscar estudiante..." style="width:250px;" oninput="renderStudentsTable()">
+          </div>
           <div style="overflow-x:auto;">
             <table class="students-table">
-              <thead><tr><th>#</th><th>Nombre</th><th>Código</th><th>Estado</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nombre</th>
+                  <th>Código único</th>
+                  <th>Estado</th>
+                  <th>Fecha y hora del voto</th>
+                  <th></th>
+                </tr>
+              </thead>
               <tbody id="students-tbody"></tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- TAB: Ajustes -->
       <div class="admin-panel" id="tab-settings">
         <div class="panel-card">
-          <h3>⚙️ Ajustes</h3>
-          <div class="form-group"><label>Cambiar contraseña</label><input type="password" id="s-newpwd"></div>
-          <button class="btn-primary" onclick="saveSettings()">Guardar</button>
+          <h3>⚙️ Ajustes generales</h3>
+          <div class="form-group">
+            <label>Nombre del colegio</label>
+            <input type="text" id="s-school" value="Colegio Claretiano">
+          </div>
+          <div class="form-group">
+            <label>Año lectivo</label>
+            <input type="text" id="s-year" value="2025">
+          </div>
+          <div class="form-group">
+            <label>Cambiar contraseña admin</label>
+            <input type="password" id="s-newpwd" placeholder="Nueva contraseña">
+          </div>
+          <button class="btn-primary" onclick="saveSettings()">Guardar cambios</button>
         </div>
         <div class="panel-card">
-          <h3>🗑️ Peligro</h3>
-          <button class="btn-sm del" onclick="resetVotes()">Reiniciar votos</button>
-          <button class="btn-sm del" onclick="clearStudents()">Borrar estudiantes</button>
+          <h3>🗑️ Zona de peligro</h3>
+          <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">Estas acciones son irreversibles.</p>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button class="btn-sm del" onclick="resetVotes()">Reiniciar todos los votos</button>
+            <button class="btn-sm del" onclick="clearStudents()">Borrar lista de estudiantes</button>
+          </div>
         </div>
       </div>
-    </div>
+
+    </div><!-- /admin-dashboard -->
   </div>
 </div>
 
 <script>
-// ==================== ESTADO GLOBAL ====================
+// ═══════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════
 const APP = {
+  // Config
   sheetUrl: localStorage.getItem('sheetUrl') || '',
   adminPwd: localStorage.getItem('adminPwd') || 'admin123',
   votingOpen: JSON.parse(localStorage.getItem('votingOpen') ?? 'true'),
+  schoolName: localStorage.getItem('schoolName') || 'Colegio Claretiano',
+  schoolYear: localStorage.getItem('schoolYear') || '2025',
+
+  // Datos
   parties: JSON.parse(localStorage.getItem('parties') || 'null') || [
-    { name: 'Partido Azul', candidate: 'Valentina Rodríguez', vicecandidate: 'Carlos Méndez', slogan: 'Unidad y Progreso', color: '#1A3A8F', emoji: '🌊', image: 'img/partido-azul.jpg', votes: 0 },
-    { name: 'Partido Rojo', candidate: 'Marcos Jiménez', vicecandidate: 'Laura Castro', slogan: 'Fuerza y Renovación', color: '#C8181E', emoji: '🔥', image: 'img/partido-rojo.png', votes: 0 },
-    { name: 'Partido Verde', candidate: 'Luciana Mora', vicecandidate: 'Andrés Solano', slogan: 'Futuro Sostenible', color: '#1B7A4A', emoji: '🌿', image: 'img/partido-verde.jpg', votes: 0 }
+    { name: 'Partido Azul', candidate: 'Valentina Rodríguez', slogan: 'Unidad y Progreso', color: '#002B7F', emoji: '🌊', votes: 0 },
+    { name: 'Partido Rojo', candidate: 'Marcos Jiménez', slogan: 'Fuerza y Renovación', color: '#CE1126', emoji: '🔥', votes: 0 },
+    { name: 'Partido Verde', candidate: 'Luciana Mora', slogan: 'Futuro Sostenible', color: '#1B7A4A', emoji: '🌿', votes: 0 },
   ],
   students: JSON.parse(localStorage.getItem('students') || '[]'),
+
+  // Sesión votante actual
   currentVoter: null,
-  selectedPartyIdx: -1
+  selectedPartyIdx: -1,
 };
 
-// ==================== FUNCIONES GLOBALES ====================
+// ═══════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════
 function showView(v) {
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('view-' + v).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && v === 'voter') || (i === 1 && v === 'admin'));
+  });
 }
 
 function showAdminTab(t) {
   document.querySelectorAll('.admin-panel').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + t).classList.add('active');
-  if (event.target) event.target.classList.add('active');
+  event.target.classList.add('active');
   if (t === 'dashboard') refreshResults();
   if (t === 'parties') renderPartiesAdmin();
   if (t === 'students') renderStudentsTable();
 }
 
+// ═══════════════════════════════════════
+// PERSISTENCIA LOCAL
+// ═══════════════════════════════════════
 function save() {
   localStorage.setItem('parties', JSON.stringify(APP.parties));
   localStorage.setItem('students', JSON.stringify(APP.students));
   localStorage.setItem('adminPwd', APP.adminPwd);
   localStorage.setItem('votingOpen', JSON.stringify(APP.votingOpen));
+  localStorage.setItem('schoolName', APP.schoolName);
+  localStorage.setItem('schoolYear', APP.schoolYear || '2025');
   if (APP.sheetUrl) localStorage.setItem('sheetUrl', APP.sheetUrl);
 }
 
-function showMsg(el, text, type) {
-  if (!el) return;
-  el.textContent = text;
-  el.className = 'msg msg-' + (type || 'info');
+// ═══════════════════════════════════════
+// GOOGLE SHEETS SYNC
+// ═══════════════════════════════════════
+function saveSheetUrl() {
+  APP.sheetUrl = document.getElementById('sheets-url-input').value.trim();
+  localStorage.setItem('sheetUrl', APP.sheetUrl);
+  showToast('URL guardada correctamente ✓');
 }
 
-function showToast(msg) {
-  let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    t.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:#1A1A2E;color:white;padding:0.75rem 1.25rem;border-radius:8px;font-size:0.88rem;z-index:9999';
-    document.body.appendChild(t);
+async function syncToSheet(action, data) {
+  if (!APP.sheetUrl) return null;
+  try {
+    const resp = await fetch(APP.sheetUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action, ...data }),
+    });
+    return await resp.json();
+  } catch (e) {
+    console.warn('Sync falló:', e);
+    return null;
   }
-  t.textContent = msg;
-  t.style.opacity = '1';
-  setTimeout(() => t.style.opacity = '0', 3000);
 }
 
-// ==================== LOGIN VOTANTE ====================
-function loginVoter() {
+async function fetchFromSheet(action, params = {}) {
+  if (!APP.sheetUrl) return null;
+  try {
+    const url = new URL(APP.sheetUrl);
+    url.searchParams.set('action', action);
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    const resp = await fetch(url);
+    return await resp.json();
+  } catch (e) {
+    console.warn('Fetch falló:', e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════
+// LOGIN VOTANTE
+// ═══════════════════════════════════════
+async function loginVoter() {
   const input = document.getElementById('voter-code-input');
-  const code = input.value.trim().toUpperCase();
+  const code  = input.value.trim().toUpperCase();
   const msgEl = document.getElementById('login-msg');
-  const btn = document.querySelector('#voter-login .btn-primary');
-  
+  const btn   = document.querySelector('#voter-login .btn-primary');
+
+  // ── Validaciones básicas ──────────────────────────────
   if (!code) {
-    showMsg(msgEl, '⚠️ Ingresá tu código', 'error');
+    showMsg(msgEl, '⚠️ Por favor ingresá tu código antes de continuar.', 'error');
     input.focus();
     return;
   }
-  
+
+  // Formato mínimo: al menos 3 caracteres
+  if (code.length < 3) {
+    showMsg(msgEl, '❌ El código es demasiado corto. Revisá que esté completo.', 'error');
+    input.focus();
+    return;
+  }
+
   if (!APP.votingOpen) {
-    showMsg(msgEl, '⏸ La votación está cerrada', 'error');
+    showMsg(msgEl, '⏸ La votación está cerrada en este momento. Consultá con la dirección.', 'error');
     return;
   }
-  
+
+  if (!APP.parties.length) {
+    showMsg(msgEl, '⚠️ No hay partidos registrados. Contactá al administrador.', 'error');
+    return;
+  }
+
+  // ── Estado: verificando ───────────────────────────────
   btn.disabled = true;
-  btn.textContent = 'Verificando...';
-  
-  // Buscar estudiante
-  let student = APP.students.find(s => s.code === code);
-  
-  if (!student && APP.students.length === 0) {
-    // Demo: permitir cualquier código si no hay estudiantes cargados
-    student = { name: 'Estudiante', code: code, voted: false };
+  btn.textContent = 'Verificando…';
+  showMsg(msgEl, '🔍 Verificando código...', 'info');
+
+  let student  = null;
+  let fromSheet = false;
+
+  // ── 1. Verificar contra Google Sheets (si está configurado) ──
+  if (APP.sheetUrl) {
+    try {
+      const r = await fetchFromSheet('checkCode', { code });
+      if (r && !r.error) {
+        fromSheet = true;
+        if (!r.found) {
+          btn.disabled = false; btn.textContent = 'Entrar';
+          showMsg(msgEl, '❌ Código no encontrado. Revisá que esté bien escrito o consultá con la dirección.', 'error');
+          input.select();
+          return;
+        }
+        if (r.voted) {
+          btn.disabled = false; btn.textContent = 'Entrar';
+          showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo se puede votar una vez.', 'error');
+          return;
+        }
+        student = { name: r.name || 'Estudiante', code, voted: false };
+      }
+      // Si r.error o no hay respuesta útil → caer a validación local
+    } catch(e) {
+      // Sin conexión → caer a validación local
+    }
   }
-  
-  if (!student) {
-    btn.disabled = false;
-    btn.textContent = 'Entrar';
-    showMsg(msgEl, '❌ Código no válido', 'error');
-    input.select();
-    return;
+
+  // ── 2. Verificar en lista local (si no vino del sheet) ──
+  if (!fromSheet) {
+    if (APP.students.length === 0) {
+      // No hay lista cargada y no hay sheet → advertir pero dejar pasar (modo demo)
+      student = { name: 'Estudiante', code, voted: false };
+    } else {
+      const found = APP.students.find(s => s.code.toUpperCase() === code);
+      if (!found) {
+        btn.disabled = false; btn.textContent = 'Entrar';
+        showMsg(msgEl, '❌ Código no válido. Revisá que esté escrito correctamente.', 'error');
+        input.select();
+        return;
+      }
+      if (found.voted) {
+        btn.disabled = false; btn.textContent = 'Entrar';
+        showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo podés votar una vez.', 'error');
+        return;
+      }
+      student = found;
+    }
   }
-  
-  if (student.voted) {
-    btn.disabled = false;
-    btn.textContent = 'Entrar';
-    showMsg(msgEl, '⚠️ Ya votaste', 'error');
-    return;
-  }
-  
-  // Login exitoso
-  btn.disabled = false;
-  btn.textContent = 'Entrar';
-  msgEl.textContent = '';
-  
+
+  // ── 3. Todo OK → mostrar papeleta ────────────────────
+  btn.disabled = false; btn.textContent = 'Entrar';
+  msgEl.textContent = ''; msgEl.className = '';
+
   APP.currentVoter = student;
   APP.selectedPartyIdx = -1;
-  
+
   document.getElementById('voter-login').style.display = 'none';
   document.getElementById('voter-ballot').style.display = 'block';
-  document.getElementById('voter-welcome-tag').textContent = `Hola, ${student.name}`;
-  
+  document.getElementById('voter-welcome-tag').textContent = `Hola, ${APP.currentVoter.name || 'Estudiante'}`;
+
   renderBallot();
 }
 
+// ═══════════════════════════════════════
+// PAPELETA
+// ═══════════════════════════════════════
 function renderBallot() {
   const grid = document.getElementById('ballot-parties-grid');
   grid.innerHTML = '';
   APP.parties.forEach((p, i) => {
-    const imageHtml = p.image ? `<img src="${p.image}" class="party-image" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : '';
-    const fallbackHtml = `<div class="party-color-dot" style="background:${p.color}20;display:flex;">${p.emoji || '🏛️'}</div>`;
+    const mediaHtml = p.image
+      ? `<img src="${p.image}" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:3px solid ${p.color};margin:0 auto 0.75rem;display:block;">`
+      : `<div class="party-color-dot" style="background:${p.color}20;">${p.emoji || '🏛️'}</div>`;
     grid.innerHTML += `
-      <div class="party-card" onclick="selectParty(${i})">
+      <div class="party-card" id="pcard-${i}" onclick="selectParty(${i})">
         <span class="check-badge">✓</span>
-        <div style="position:relative;">
-          ${imageHtml}
-          ${!p.image ? fallbackHtml : `<div class="party-color-dot" style="background:${p.color}20;display:none;">${p.emoji || '🏛️'}</div>`}
-        </div>
+        ${mediaHtml}
         <div class="party-name">${p.name}</div>
         <div class="party-candidate">${p.candidate}</div>
         ${p.vicecandidate ? `<div style="font-size:0.78rem;color:var(--text-muted);">Vice: ${p.vicecandidate}</div>` : ''}
         <div class="party-slogan">"${p.slogan}"</div>
+        ${p.description ? `<div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.4rem;line-height:1.4;">${p.description}</div>` : ''}
       </div>`;
   });
 }
@@ -1097,7 +1385,10 @@ function openConfirm() {
   const p = APP.parties[APP.selectedPartyIdx];
   document.getElementById('confirm-preview').innerHTML = `
     <div style="width:40px;height:40px;border-radius:50%;background:${p.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;">${p.emoji || '🏛️'}</div>
-    <div><strong>${p.name}</strong><br><small>${p.candidate}</small></div>`;
+    <div>
+      <div style="font-weight:600;font-size:0.9rem;">${p.name}</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);">${p.candidate}</div>
+    </div>`;
   document.getElementById('confirm-overlay').classList.add('open');
 }
 
@@ -1105,37 +1396,95 @@ function closeConfirm() {
   document.getElementById('confirm-overlay').classList.remove('open');
 }
 
-function submitVote() {
+async function submitVote() {
   const btn = document.getElementById('btn-confirm-vote');
   btn.disabled = true;
   btn.textContent = 'Registrando...';
-  
+
   const p = APP.parties[APP.selectedPartyIdx];
+  const voteTimestamp = new Date().toISOString();
+  const voterCode = APP.currentVoter.code.toUpperCase();
+
+  // ── Guardar localmente ────────────────────────────────
   APP.parties[APP.selectedPartyIdx].votes = (p.votes || 0) + 1;
-  
-  const studentIdx = APP.students.findIndex(s => s.code === APP.currentVoter.code);
+
+  // Buscar por código normalizado (mayúsculas)
+  const studentIdx = APP.students.findIndex(s => s.code.toUpperCase() === voterCode);
   if (studentIdx >= 0) {
-    APP.students[studentIdx].voted = true;
+    APP.students[studentIdx].voted    = true;
+    APP.students[studentIdx].voteTime = voteTimestamp;
+  } else {
+    // Si no estaba en la lista local (vino del sheet), agregarlo con los datos
+    APP.students.push({
+      name:      APP.currentVoter.name || 'Estudiante',
+      code:      voterCode,
+      voted:     true,
+      voteTime:  voteTimestamp,
+    });
   }
   save();
-  
+
+  // ── Sync a Google Sheets ─────────────────────────────
+  if (APP.sheetUrl) {
+    await syncToSheet('vote', {
+      code:      voterCode,
+      party:     p.name,
+      name:      APP.currentVoter.name || '',
+      timestamp: voteTimestamp,
+    });
+  }
+
   closeConfirm();
   document.getElementById('voter-ballot').style.display = 'none';
   document.getElementById('vote-success').classList.add('show');
+  startCountdown();
+}
+
+function startCountdown() {
+  let secs = 5;
+  const numEl = document.getElementById('countdown-num');
+  if (numEl) numEl.textContent = secs;
+  clearInterval(APP._countdownTimer);
+  APP._countdownTimer = setInterval(() => {
+    secs--;
+    if (numEl) numEl.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(APP._countdownTimer);
+      resetVoterView();
+    }
+  }, 1000);
 }
 
 function resetVoterView() {
+  clearInterval(APP._countdownTimer);
   APP.currentVoter = null;
   APP.selectedPartyIdx = -1;
   document.getElementById('voter-code-input').value = '';
   document.getElementById('login-msg').textContent = '';
+  document.getElementById('login-msg').className = '';
   document.getElementById('vote-success').classList.remove('show');
   document.getElementById('voter-ballot').style.display = 'none';
   document.getElementById('voter-login').style.display = 'block';
   document.getElementById('btn-vote').disabled = true;
+  document.getElementById('vote-hint').textContent = 'Seleccioná un partido para continuar';
 }
 
-// ==================== ADMIN ====================
+// ═══════════════════════════════════════
+// LOGIN ADMIN
+// ═══════════════════════════════════════
+function logoutAdmin() {
+  if (!confirm('¿Cerrar sesión de administrador?')) return;
+  document.getElementById('admin-dashboard').style.display = 'none';
+  document.getElementById('admin-login').style.display = 'block';
+  document.getElementById('admin-pwd-input').value = '';
+  document.getElementById('admin-login-msg').textContent = '';
+  // Resetear tabs al volver
+  document.querySelectorAll('.admin-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.admin-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+  clearInterval(_autoRefreshTimer);
+  showToast('Sesión cerrada ✓');
+}
+
 function loginAdmin() {
   const pwd = document.getElementById('admin-pwd-input').value;
   const msg = document.getElementById('admin-login-msg');
@@ -1144,7 +1493,12 @@ function loginAdmin() {
     document.getElementById('admin-dashboard').style.display = 'block';
     document.getElementById('sheets-url-input').value = APP.sheetUrl;
     document.getElementById('voting-toggle').checked = APP.votingOpen;
+    document.getElementById('s-school').value = APP.schoolName || 'Colegio Claretiano';
+    document.getElementById('s-year').value = APP.schoolYear || '2025';
     refreshResults();
+    // Iniciar auto-refresh
+    clearInterval(_autoRefreshTimer);
+    _autoRefreshTimer = setInterval(refreshResults, 30000);
     renderPartiesAdmin();
     renderStudentsTable();
   } else {
@@ -1152,44 +1506,109 @@ function loginAdmin() {
   }
 }
 
-function saveSheetUrl() {
-  APP.sheetUrl = document.getElementById('sheets-url-input').value.trim();
-  localStorage.setItem('sheetUrl', APP.sheetUrl);
-  showToast('URL guardada');
+// ═══════════════════════════════════════
+// RESULTADOS
+// ═══════════════════════════════════════
+// ── AUTO-REFRESH ──
+let _autoRefreshTimer = null;
+
+function toggleAutoRefresh() {
+  const on = document.getElementById('auto-refresh-toggle').checked;
+  clearInterval(_autoRefreshTimer);
+  if (on) _autoRefreshTimer = setInterval(refreshResults, 30000);
 }
 
-function toggleVoting() {
-  APP.votingOpen = document.getElementById('voting-toggle').checked;
-  document.getElementById('voting-status-text').textContent = APP.votingOpen ? 'Votación activa' : 'Votación cerrada';
-  save();
+function setSyncState(state, msg, time) {
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const timeEl = document.getElementById('sync-time');
+  dot.className = 'sync-dot ' + state;
+  label.textContent = msg;
+  if (time) timeEl.textContent = time;
 }
 
-function saveSettings() {
-  const newPwd = document.getElementById('s-newpwd').value.trim();
-  if (newPwd) APP.adminPwd = newPwd;
-  save();
-  showToast('Cambios guardados');
+function formatSyncTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' });
+  } catch { return iso; }
 }
 
-function refreshResults() {
-  const total = APP.parties.reduce((s, p) => s + (p.votes || 0), 0);
+async function refreshResults() {
+  const btn = document.getElementById('btn-refresh-main');
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+  setSyncState('spin', 'Actualizando…', '');
+
+  let parties  = APP.parties;
+  let students = APP.students;
+  let lastUpdate = null;
+  let fromSheet  = false;
+
+  if (APP.sheetUrl) {
+    try {
+      const r = await fetchFromSheet('results');
+      if (r && !r.error) {
+        if (r.parties  && r.parties.length)  { parties  = r.parties;  APP.parties  = parties; }
+        if (r.students && r.students.length) {
+          // Merge: conservar voteTime del sheet sobre el local
+          r.students.forEach(sheetSt => {
+            const localIdx = APP.students.findIndex(ls => ls.code.toUpperCase() === sheetSt.code.toUpperCase());
+            if (localIdx >= 0) {
+              APP.students[localIdx].voted    = sheetSt.voted;
+              APP.students[localIdx].voteTime = sheetSt.voteTime || APP.students[localIdx].voteTime;
+            } else {
+              APP.students.push(sheetSt);
+            }
+          });
+          students = APP.students;
+        }
+        if (r.lastUpdate) lastUpdate = r.lastUpdate;
+        fromSheet = true;
+        save();
+      }
+    } catch(e) { /* usa datos locales */ }
+  }
+
+  if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
+
+  if (fromSheet && lastUpdate) {
+    setSyncState('ok', '✓ Sincronizado con Google Sheets', formatSyncTime(lastUpdate));
+  } else if (fromSheet) {
+    const now = new Date().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' });
+    setSyncState('ok', '✓ Sincronizado con Google Sheets', now);
+  } else if (APP.sheetUrl) {
+    setSyncState('err', '⚠ Sin conexión — mostrando datos locales', '');
+  } else {
+    setSyncState('local', 'Datos locales (sin Google Sheets configurado)', '');
+  }
+
+  const total = parties.reduce((s, p) => s + (p.votes || 0), 0);
   document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-students').textContent = APP.students.length;
-  document.getElementById('stat-pct').textContent = APP.students.length > 0 ? Math.round((total / APP.students.length) * 100) + '%' : '0%';
-  
+  document.getElementById('stat-students').textContent = students.length;
+  document.getElementById('stat-pct').textContent = students.length > 0
+    ? Math.round((total / students.length) * 100) + '%' : '0%';
+
+  // Último voto (del sheet si hay datos de votos)
+  if (lastUpdate) {
+    document.getElementById('stat-last-vote').textContent = '';
+    document.getElementById('stat-last-vote').innerHTML =
+      '<span class="sheet-update-badge">📋 ' + formatSyncTime(lastUpdate) + '</span>';
+    document.getElementById('stat-last-vote').parentElement.querySelector('.stat-l').textContent = 'Última actualización Sheet';
+  }
+
   const barsEl = document.getElementById('results-bars');
   if (total === 0) {
-    barsEl.innerHTML = '<div class="empty-state">📊 Aún no hay votos</div>';
+    barsEl.innerHTML = '<div class="empty-state"><div class="big">📊</div>Aún no hay votos registrados</div>';
     return;
   }
-  barsEl.innerHTML = APP.parties.map(p => {
+  barsEl.innerHTML = parties.map(p => {
     const pct = total > 0 ? Math.round((p.votes || 0) / total * 100) : 0;
     return `
       <div class="result-row">
         <div class="result-row-top">
           <span class="result-party-name">
             <span style="width:14px;height:14px;border-radius:50%;background:${p.color};display:inline-block;"></span>
-            ${p.emoji} ${p.name} — ${p.candidate}
+            ${p.emoji || '🏛️'} ${p.name} — <em style="font-weight:300">${p.candidate}</em>
           </span>
           <span class="result-pct">${p.votes || 0} votos · ${pct}%</span>
         </div>
@@ -1200,38 +1619,79 @@ function refreshResults() {
   }).join('');
 }
 
+// ═══════════════════════════════════════
+// PARTIDOS ADMIN
+// ═══════════════════════════════════════
+// ── Imagen base64 temporal mientras edita ──
+let _currentPartyImg = null;
+
+function previewPartyImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('⚠️ La imagen supera los 2MB'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _currentPartyImg = e.target.result;
+    document.getElementById('img-preview').src = _currentPartyImg;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+    document.getElementById('img-filename').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPartyImage() {
+  _currentPartyImg = null;
+  document.getElementById('img-preview').src = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-placeholder').style.display = 'flex';
+  document.getElementById('img-filename').textContent = '';
+  document.getElementById('pf-img-input').value = '';
+}
+
 function renderPartiesAdmin() {
   const list = document.getElementById('admin-parties-list');
   if (!APP.parties.length) {
-    list.innerHTML = '<div class="empty-state">No hay partidos</div>';
+    list.innerHTML = '<div class="empty-state"><div class="big">🏛️</div>No hay partidos aún</div>';
     return;
   }
-  list.innerHTML = APP.parties.map((p, i) => `
+  list.innerHTML = APP.parties.map((p, i) => {
+    const imgHtml = p.image
+      ? `<img src="${p.image}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid var(--border);">`
+      : `<div class="color-preview" style="background:${p.color}20;font-size:22px;">${p.emoji || '🏛️'}</div>`;
+    return `
     <div class="party-admin-card">
       <div class="party-admin-top">
-        ${p.image ? `<img src="${p.image}" onerror="this.style.display='none'">` : `<div class="color-preview" style="background:${p.color}20;">${p.emoji}</div>`}
+        ${imgHtml}
         <div>
-          <strong>${p.name}</strong><br>
-          <small>${p.candidate}</small>
-          <div style="font-size:0.75rem;color:var(--text-muted);">${p.votes || 0} votos</div>
+          <div style="font-weight:600;">${p.name}</div>
+          <div style="font-size:0.83rem;color:var(--text-muted);">${p.candidate}${p.vicecandidate ? ' · Vice: ' + p.vicecandidate : ''}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);font-style:italic;">"${p.slogan}"</div>
+          ${p.description ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">${p.description}</div>` : ''}
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};vertical-align:middle;"></span>
+            ${p.votes || 0} votos
+          </div>
         </div>
       </div>
       <div class="party-admin-btns">
-        <button class="btn-sm" onclick="editParty(${i})">✏️</button>
+        <button class="btn-sm" onclick="editParty(${i})">✏️ Editar</button>
         <button class="btn-sm del" onclick="deleteParty(${i})">🗑️</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
-function openPartyForm() {
+function openPartyForm(isEdit = false) {
   document.getElementById('party-form-card').style.display = 'block';
-  document.getElementById('party-form-title').textContent = 'Nuevo partido';
-  document.getElementById('edit-party-idx').value = '-1';
-  ['pf-name','pf-candidate','pf-vicecandidate','pf-slogan','pf-emoji','pf-description','pf-image-url'].forEach(id => {
-    if (document.getElementById(id)) document.getElementById(id).value = '';
-  });
-  document.getElementById('pf-color').value = '#1A3A8F';
+  document.getElementById('party-form-title').textContent = isEdit ? '✏️ Editar partido' : '➕ Nuevo partido';
+  if (!isEdit) {
+    ['pf-name','pf-candidate','pf-vicecandidate','pf-slogan','pf-emoji','pf-description'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pf-color').value = '#1A3A8F';
+    document.getElementById('edit-party-idx').value = '-1';
+    clearPartyImage();
+  }
+  document.getElementById('party-form-card').scrollIntoView({ behavior: 'smooth' });
 }
 
 function editParty(i) {
@@ -1243,49 +1703,59 @@ function editParty(i) {
   document.getElementById('pf-color').value = p.color;
   document.getElementById('pf-emoji').value = p.emoji || '';
   document.getElementById('pf-description').value = p.description || '';
-  document.getElementById('pf-image-url').value = p.image || '';
   document.getElementById('edit-party-idx').value = i;
-  document.getElementById('party-form-card').style.display = 'block';
-  document.getElementById('party-form-title').textContent = 'Editar partido';
+  // Cargar imagen existente
+  if (p.image) {
+    _currentPartyImg = p.image;
+    document.getElementById('img-preview').src = p.image;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+    document.getElementById('img-filename').textContent = 'Imagen actual';
+  } else {
+    clearPartyImage();
+  }
+  openPartyForm(true);
 }
 
 function saveParty() {
   const idx = parseInt(document.getElementById('edit-party-idx').value);
   const party = {
-    name: document.getElementById('pf-name').value.trim(),
-    candidate: document.getElementById('pf-candidate').value.trim(),
+    name:          document.getElementById('pf-name').value.trim(),
+    candidate:     document.getElementById('pf-candidate').value.trim(),
     vicecandidate: document.getElementById('pf-vicecandidate').value.trim(),
-    slogan: document.getElementById('pf-slogan').value.trim(),
-    description: document.getElementById('pf-description').value.trim(),
-    color: document.getElementById('pf-color').value,
-    emoji: document.getElementById('pf-emoji').value.trim() || '🏛️',
-    image: document.getElementById('pf-image-url').value.trim() || null,
-    votes: idx >= 0 ? APP.parties[idx].votes : 0
+    slogan:        document.getElementById('pf-slogan').value.trim(),
+    description:   document.getElementById('pf-description').value.trim(),
+    color:         document.getElementById('pf-color').value,
+    emoji:         document.getElementById('pf-emoji').value.trim() || '🏛️',
+    image:         _currentPartyImg || (idx >= 0 ? APP.parties[idx].image : null),
+    votes:         idx >= 0 ? APP.parties[idx].votes : 0,
   };
-  if (!party.name || !party.candidate) {
-    showToast('Completá nombre y candidato');
-    return;
-  }
+  if (!party.name || !party.candidate) { showToast('⚠️ Completá nombre y candidato/a'); return; }
   if (idx >= 0) APP.parties[idx] = party;
   else APP.parties.push(party);
   save();
   cancelPartyForm();
   renderPartiesAdmin();
-  showToast('Partido guardado');
+  showToast('Partido guardado ✓');
 }
 
 function cancelPartyForm() {
   document.getElementById('party-form-card').style.display = 'none';
+  clearPartyImage();
 }
+
+
 
 function deleteParty(i) {
-  if (confirm(`¿Eliminar "${APP.parties[i].name}"?`)) {
-    APP.parties.splice(i, 1);
-    save();
-    renderPartiesAdmin();
-  }
+  if (!confirm(`¿Eliminar "${APP.parties[i].name}"? Se perderán sus votos.`)) return;
+  APP.parties.splice(i, 1);
+  save();
+  renderPartiesAdmin();
 }
 
+// ═══════════════════════════════════════
+// ESTUDIANTES
+// ═══════════════════════════════════════
 function bulkAddStudents() {
   const raw = document.getElementById('students-bulk-input').value.trim();
   if (!raw) return;
@@ -1293,69 +1763,332 @@ function bulkAddStudents() {
   let added = 0;
   lines.forEach(line => {
     const parts = line.split(',').map(p => p.trim());
-    const name = parts[0];
-    const code = parts[1] ? parts[1].toUpperCase() : 'EST-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const name = parts[0] || '';
+    const code = parts[1] ? parts[1].toUpperCase() : 'EST-' + Math.random().toString(36).substr(2,6).toUpperCase();
     if (!name) return;
-    if (!APP.students.find(s => s.code === code)) {
-      APP.students.push({ name, code, voted: false });
-      added++;
-    }
+    if (APP.students.find(s => s.code === code)) return;
+    APP.students.push({ name, code, voted: false });
+    added++;
   });
   save();
   renderStudentsTable();
   document.getElementById('students-bulk-input').value = '';
-  showToast(`${added} estudiante(s) agregados`);
+  showToast(`✓ ${added} estudiante(s) agregados`);
+
+  // Sync a sheets
+  if (APP.sheetUrl) syncToSheet('updateStudents', { students: APP.students });
 }
 
 function renderStudentsTable() {
-  const tbody = document.getElementById('students-tbody');
+  const search = (document.getElementById('student-search')?.value || '').toLowerCase();
+  const filtered = APP.students.filter(s =>
+    s.name.toLowerCase().includes(search) || s.code.toLowerCase().includes(search)
+  );
   document.getElementById('students-count').textContent = APP.students.length;
-  if (!APP.students.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay estudiantes</td></tr>';
+  const tbody = document.getElementById('students-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay estudiantes</td></tr>`;
     return;
   }
-  tbody.innerHTML = APP.students.map((s, i) => `
+  tbody.innerHTML = filtered.map((s, i) => {
+    let voteTimeStr = '—';
+    if (s.voteTime) {
+      try {
+        const d = new Date(s.voteTime);
+        // Validar que la fecha sea válida
+        if (!isNaN(d.getTime())) {
+          voteTimeStr = d.toLocaleString('es-CR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: true
+          });
+        } else {
+          voteTimeStr = s.voteTime;
+        }
+      } catch(e) { voteTimeStr = s.voteTime; }
+    } else if (s.voted) {
+      voteTimeStr = 'Sin registro';
+    }
+    return `
     <tr>
-      <td>${i+1}</td>
+      <td style="color:var(--text-muted)">${i+1}</td>
       <td>${s.name}</td>
       <td><span class="code-badge">${s.code}</span></td>
-      <td><span class="voted-badge ${s.voted ? 'yes' : 'no'}">${s.voted ? '✓ Votó' : '○ Pendiente'}</span></td>
-      <td><button class="btn-sm del" onclick="deleteStudent('${s.code}')">✕</button></td>
-    </tr>
-  `).join('');
+      <td>
+        <span class="voted-badge ${s.voted ? 'yes' : 'no'}">
+          ${s.voted ? '✓ Votó' : '○ Pendiente'}
+        </span>
+      </td>
+      <td style="font-size:0.8rem;color:var(--text-muted);">${voteTimeStr}</td>
+      <td>
+        <button class="btn-sm del" onclick="deleteStudent('${s.code}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function deleteStudent(code) {
-  if (confirm('¿Eliminar este estudiante?')) {
-    APP.students = APP.students.filter(s => s.code !== code);
-    save();
-    renderStudentsTable();
-  }
+  if (!confirm('¿Eliminar este estudiante?')) return;
+  APP.students = APP.students.filter(s => s.code !== code);
+  save(); renderStudentsTable();
 }
 
 function generateCodesExample() {
-  document.getElementById('students-bulk-input').value = 
-    'Ana García,EST-001\nCarlos Mora,EST-002\nLucía Jiménez,EST-003\nDiego Vargas,EST-004\nSofía Solano,EST-005';
+  document.getElementById('students-bulk-input').value =
+    `Ana García,EST-2025-001\nCarlos Mora,EST-2025-002\nLucía Jiménez,EST-2025-003\nDiego Vargas\nSofía Solano,EST-2025-005`;
+}
+
+function exportStudentCodes() {
+  if (!APP.students.length) { showToast('No hay estudiantes cargados'); return; }
+  let csv = 'Nombre,Código,Estado,Fecha y hora del voto\n';
+  APP.students.forEach(s => {
+    let vt = '';
+    if (s.voteTime) { try { vt = new Date(s.voteTime).toLocaleString('es-CR'); } catch(e){ vt = s.voteTime; } }
+    csv += `"${s.name}","${s.code}","${s.voted ? 'Votó' : 'Pendiente'}","${vt}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'estudiantes-codigos.csv';
+  link.click();
+}
+
+// ═══════════════════════════════════════
+// AJUSTES
+// ═══════════════════════════════════════
+function toggleVoting() {
+  APP.votingOpen = document.getElementById('voting-toggle').checked;
+  document.getElementById('voting-status-text').textContent = APP.votingOpen ? 'Votación activa' : 'Votación cerrada';
+  save();
+}
+
+function saveSettings() {
+  APP.schoolName = document.getElementById('s-school').value.trim();
+  APP.schoolYear = document.getElementById('s-year').value.trim();
+  const newPwd = document.getElementById('s-newpwd').value.trim();
+  const headerSub = document.querySelector('.header h1 span');
+  if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
+  if (newPwd) APP.adminPwd = newPwd;
+  save();
+  showToast('Cambios guardados ✓');
 }
 
 function resetVotes() {
-  if (confirm('¿Reiniciar TODOS los votos?')) {
-    APP.parties.forEach(p => p.votes = 0);
-    APP.students.forEach(s => s.voted = false);
-    save();
-    refreshResults();
-    showToast('Votos reiniciados');
-  }
+  if (!confirm('¿Reiniciar TODOS los votos? Esta acción no se puede deshacer.')) return;
+  APP.parties.forEach(p => p.votes = 0);
+  APP.students.forEach(s => s.voted = false);
+  save(); refreshResults();
+  showToast('Votos reiniciados');
 }
 
 function clearStudents() {
-  if (confirm('¿Borrar todos los estudiantes?')) {
-    APP.students = [];
-    save();
-    renderStudentsTable();
-    showToast('Lista borrada');
-  }
+  if (!confirm('¿Borrar toda la lista de estudiantes?')) return;
+  APP.students = [];
+  save(); renderStudentsTable();
+  showToast('Lista borrada');
 }
+
+// ═══════════════════════════════════════
+// APPS SCRIPT — CÓDIGO PARA DESCARGAR
+// ═══════════════════════════════════════
+function downloadAppsScript() {
+  const lines = [
+    '// ═══════════════════════════════════════════════════════════',
+    '// APPS SCRIPT — SISTEMA DE VOTACIONES COLEGIO CLARETIANO',
+    '// 1. Pegá este código en Extensiones > Apps Script de tu Google Sheet',
+    '// 2. Implementar > Nueva implementación > Aplicación web',
+    '//    - Ejecutar como: Yo',
+    '//    - Acceso: Cualquier persona',
+    '// 3. Copiá la URL y pegála en el panel de administración',
+    '// ═══════════════════════════════════════════════════════════',
+    '',
+    "const SHEET_VOTES    = 'Votos';",
+    "const SHEET_STUDENTS = 'Estudiantes';",
+    "const SHEET_PARTIES  = 'Partidos';",
+    "const SHEET_CONFIG   = 'Config';",
+    '',
+    'function respond(data) {',
+    '  return ContentService',
+    '    .createTextOutput(JSON.stringify(data))',
+    '    .setMimeType(ContentService.MimeType.JSON);',
+    '}',
+    '',
+    'function getSheet(name) {',
+    '  const ss = SpreadsheetApp.getActiveSpreadsheet();',
+    '  let sheet = ss.getSheetByName(name);',
+    '  if (!sheet) {',
+    '    sheet = ss.insertSheet(name);',
+    "    if (name === SHEET_VOTES)    sheet.appendRow(['Timestamp', 'Codigo', 'Partido', 'Nombre']);",
+    "    if (name === SHEET_STUDENTS) sheet.appendRow(['Nombre', 'Codigo', 'Voto', 'Timestamp Voto']);",
+    "    if (name === SHEET_PARTIES)  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);",
+    "    if (name === SHEET_CONFIG)   sheet.appendRow(['Clave', 'Valor']);",
+    '  }',
+    '  return sheet;',
+    '}',
+    '',
+    'function setLastUpdate(ts) {',
+    '  const sheet = getSheet(SHEET_CONFIG);',
+    '  const data  = sheet.getDataRange().getValues();',
+    '  for (let i = 1; i < data.length; i++) {',
+    "    if (data[i][0] === 'lastUpdate') { sheet.getRange(i+1,2).setValue(ts); return; }",
+    '  }',
+    "  sheet.appendRow(['lastUpdate', ts]);",
+    '}',
+    '',
+    'function getLastUpdate() {',
+    '  const sheet = getSheet(SHEET_CONFIG);',
+    '  const data  = sheet.getDataRange().getValues();',
+    '  for (let i = 1; i < data.length; i++) {',
+    "    if (data[i][0] === 'lastUpdate') return data[i][1] ? data[i][1].toString() : null;",
+    '  }',
+    '  return null;',
+    '}',
+    '',
+    'function doGet(e) {',
+    '  const action = e.parameter.action;',
+    '  try {',
+    "    if (action === 'checkCode') return respond(checkCode(e.parameter.code));",
+    "    if (action === 'results')   return respond(getResults());",
+    "    return respond({ error: 'Accion no reconocida' });",
+    '  } catch(err) { return respond({ error: err.message }); }',
+    '}',
+    '',
+    'function doPost(e) {',
+    '  const data = JSON.parse(e.postData.contents);',
+    '  try {',
+    "    if (data.action === 'vote')           return respond(registerVote(data));",
+    "    if (data.action === 'updateStudents') return respond(updateStudents(data.students));",
+    "    if (data.action === 'updateParties')  return respond(updateParties(data.parties));",
+    "    return respond({ error: 'Accion no reconocida' });",
+    '  } catch(err) { return respond({ error: err.message }); }',
+    '}',
+    '',
+    'function checkCode(code) {',
+    '  const sheet = getSheet(SHEET_STUDENTS);',
+    '  const data  = sheet.getDataRange().getValues();',
+    '  for (let i = 1; i < data.length; i++) {',
+    '    if (data[i][1] && data[i][1].toString().toUpperCase() === code.toUpperCase()) {',
+    "      return { found: true, voted: data[i][2] === true || data[i][2] === 'TRUE', name: data[i][0], row: i+1 };",
+    '    }',
+    '  }',
+    '  return { found: false };',
+    '}',
+    '',
+    'function registerVote(data) {',
+    '  const check = checkCode(data.code);',
+    "  if (!check.found) return { ok: false, error: 'Codigo no encontrado' };",
+    "  if (check.voted)  return { ok: false, error: 'Ya voto' };",
+    '  const now = new Date().toISOString();',
+    '  // 1. Registrar en hoja Votos',
+    '  getSheet(SHEET_VOTES).appendRow([now, data.code, data.party, check.name]);',
+    '  // 2. Marcar estudiante',
+    '  const studSheet = getSheet(SHEET_STUDENTS);',
+    '  studSheet.getRange(check.row, 3).setValue(true);',
+    '  studSheet.getRange(check.row, 4).setValue(now);',
+    '  // 3. Incrementar contador partido',
+    '  const partSheet = getSheet(SHEET_PARTIES);',
+    '  const partData  = partSheet.getDataRange().getValues();',
+    '  for (let i = 1; i < partData.length; i++) {',
+    '    if (partData[i][0] === data.party) {',
+    '      partSheet.getRange(i+1, 6).setValue((parseInt(partData[i][5]) || 0) + 1);',
+    '      break;',
+    '    }',
+    '  }',
+    '  // 4. Guardar timestamp de ultima actualizacion',
+    '  setLastUpdate(now);',
+    '  return { ok: true, timestamp: now };',
+    '}',
+    '',
+    'function updateStudents(students) {',
+    '  const sheet = getSheet(SHEET_STUDENTS);',
+    '  sheet.clearContents();',
+    "  sheet.appendRow(['Nombre', 'Codigo', 'Voto', 'Timestamp Voto']);",
+    "  students.forEach(s => sheet.appendRow([s.name, s.code, s.voted || false, s.voteTime || '']));",
+    '  const now = new Date().toISOString();',
+    '  setLastUpdate(now);',
+    '  return { ok: true, timestamp: now };',
+    '}',
+    '',
+    'function updateParties(parties) {',
+    '  const sheet = getSheet(SHEET_PARTIES);',
+    '  sheet.clearContents();',
+    "  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);",
+    '  parties.forEach(p => sheet.appendRow([p.name, p.candidate, p.slogan, p.color, p.emoji, p.votes || 0]));',
+    '  const now = new Date().toISOString();',
+    '  setLastUpdate(now);',
+    '  return { ok: true, timestamp: now };',
+    '}',
+    '',
+    'function getResults() {',
+    '  // Partidos',
+    '  const partData = getSheet(SHEET_PARTIES).getDataRange().getValues();',
+    '  const parties  = [];',
+    '  for (let i = 1; i < partData.length; i++) {',
+    '    if (partData[i][0]) parties.push({',
+    '      name: partData[i][0], candidate: partData[i][1], slogan: partData[i][2],',
+    '      color: partData[i][3], emoji: partData[i][4], votes: parseInt(partData[i][5]) || 0',
+    '    });',
+    '  }',
+    '  // Estudiantes',
+    '  const studData = getSheet(SHEET_STUDENTS).getDataRange().getValues();',
+    '  const students = [];',
+    '  for (let i = 1; i < studData.length; i++) {',
+    '    if (studData[i][0]) students.push({',
+    '      name: studData[i][0], code: studData[i][1],',
+    "      voted: studData[i][2] === true || studData[i][2] === 'TRUE',",
+    '      voteTime: studData[i][3] ? studData[i][3].toString() : null',
+    '    });',
+    '  }',
+    '  // Ultimo voto real (ultima fila de Votos)',
+    '  const votesSheet = getSheet(SHEET_VOTES);',
+    '  const lastRow    = votesSheet.getLastRow();',
+    '  let lastVoteTime = null;',
+    '  if (lastRow > 1) {',
+    '    const v = votesSheet.getRange(lastRow, 1).getValue();',
+    '    if (v) lastVoteTime = v.toString();',
+    '  }',
+    '  // Fecha de ultima actualizacion guardada en Config',
+    '  const lastUpdate = getLastUpdate();',
+    '  return { parties, students, lastUpdate: lastUpdate || lastVoteTime, lastVoteTime };',
+    '}',
+  ];
+  const code = lines.join('\n');
+  const blob = new Blob([code], { type: 'text/javascript' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'votaciones-apps-script.js';
+  link.click();
+}
+
+// ═══════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'msg msg-' + (type || 'info');
+}
+
+let toastTimer;
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:#1A1A2E;color:white;padding:0.75rem 1.25rem;border-radius:8px;font-size:0.88rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);transition:opacity 0.3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.opacity = '0', 3000);
+}
+
+// Cargar URL guardada al iniciar
+window.onload = () => {
+  if (APP.sheetUrl) document.getElementById('sheets-url-input').value = APP.sheetUrl;
+  const headerSub = document.querySelector('.header h1 span');
+  if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
+};
 </script>
 </body>
 </html>
