@@ -750,6 +750,29 @@
     font-weight: 500;
   }
 
+
+  /* ── IMG UPLOAD ── */
+  .img-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    text-align: center;
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .img-upload-area:hover { border-color: var(--cr-azul); background: #EEF2FF; }
+  .img-upload-placeholder {
+    display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+    color: var(--text-muted);
+  }
+  .img-upload-placeholder span { font-size: 0.88rem; }
+  .img-upload-placeholder small { font-size: 0.75rem; }
+
 </style>
 </head>
 <body>
@@ -979,6 +1002,27 @@
         <div class="panel-card" id="party-form-card" style="display:none;">
           <h3 id="party-form-title">➕ Nuevo partido</h3>
           <input type="hidden" id="edit-party-idx" value="-1">
+
+          <!-- Imagen del partido -->
+          <div class="form-group">
+            <label>Imagen del partido (logo / foto del candidato)</label>
+            <div class="img-upload-area" id="img-upload-area" onclick="document.getElementById('pf-img-input').click()">
+              <div id="img-preview-wrap">
+                <div class="img-upload-placeholder" id="img-placeholder">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <span>Hacé clic para subir imagen</span>
+                  <small>JPG, PNG, GIF — máx 2MB</small>
+                </div>
+                <img id="img-preview" src="" alt="Preview" style="display:none;max-height:160px;max-width:100%;border-radius:8px;object-fit:contain;">
+              </div>
+              <input type="file" id="pf-img-input" accept="image/*" style="display:none;" onchange="previewPartyImage(event)">
+            </div>
+            <div style="margin-top:0.5rem;display:flex;gap:0.5rem;align-items:center;">
+              <button class="btn-sm" type="button" onclick="clearPartyImage()">✕ Quitar imagen</button>
+              <span style="font-size:0.75rem;color:var(--text-muted);" id="img-filename"></span>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label>Nombre del partido</label>
@@ -991,17 +1035,27 @@
           </div>
           <div class="form-row">
             <div class="form-group">
+              <label>Vicecandidato/a</label>
+              <input type="text" id="pf-vicecandidate" placeholder="Carlos López">
+            </div>
+            <div class="form-group">
               <label>Eslogan</label>
               <input type="text" id="pf-slogan" placeholder="Juntos construimos el futuro">
             </div>
+          </div>
+          <div class="form-row">
             <div class="form-group">
               <label>Color representativo</label>
               <input type="color" id="pf-color" value="#002B7F">
             </div>
+            <div class="form-group">
+              <label>Emoji / ícono</label>
+              <input type="text" id="pf-emoji" placeholder="🌟" maxlength="4" style="width:80px;">
+            </div>
           </div>
           <div class="form-group">
-            <label>Emoji / ícono</label>
-            <input type="text" id="pf-emoji" placeholder="🌟" maxlength="4" style="width:80px;">
+            <label>Descripción / propuesta breve</label>
+            <textarea id="pf-description" placeholder="Breve descripción del plan de gobierno estudiantil..." style="min-height:70px;resize:vertical;"></textarea>
           </div>
           <div style="display:flex; gap:0.75rem;">
             <button class="btn-primary" onclick="saveParty()">Guardar partido</button>
@@ -1038,6 +1092,7 @@
                   <th>Nombre</th>
                   <th>Código único</th>
                   <th>Estado</th>
+                  <th>Fecha y hora del voto</th>
                   <th></th>
                 </tr>
               </thead>
@@ -1089,6 +1144,7 @@ const APP = {
   adminPwd: localStorage.getItem('adminPwd') || 'admin123',
   votingOpen: JSON.parse(localStorage.getItem('votingOpen') ?? 'true'),
   schoolName: localStorage.getItem('schoolName') || 'Colegio Claretiano',
+  schoolYear: localStorage.getItem('schoolYear') || '2025',
 
   // Datos
   parties: JSON.parse(localStorage.getItem('parties') || 'null') || [
@@ -1133,6 +1189,7 @@ function save() {
   localStorage.setItem('adminPwd', APP.adminPwd);
   localStorage.setItem('votingOpen', JSON.stringify(APP.votingOpen));
   localStorage.setItem('schoolName', APP.schoolName);
+  localStorage.setItem('schoolYear', APP.schoolYear || '2025');
   if (APP.sheetUrl) localStorage.setItem('sheetUrl', APP.sheetUrl);
 }
 
@@ -1216,13 +1273,18 @@ function renderBallot() {
   const grid = document.getElementById('ballot-parties-grid');
   grid.innerHTML = '';
   APP.parties.forEach((p, i) => {
+    const mediaHtml = p.image
+      ? `<img src="${p.image}" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:3px solid ${p.color};margin:0 auto 0.75rem;display:block;">`
+      : `<div class="party-color-dot" style="background:${p.color}20;">${p.emoji || '🏛️'}</div>`;
     grid.innerHTML += `
       <div class="party-card" id="pcard-${i}" onclick="selectParty(${i})">
         <span class="check-badge">✓</span>
-        <div class="party-color-dot" style="background:${p.color}20;">${p.emoji || '🏛️'}</div>
+        ${mediaHtml}
         <div class="party-name">${p.name}</div>
         <div class="party-candidate">${p.candidate}</div>
+        ${p.vicecandidate ? `<div style="font-size:0.78rem;color:var(--text-muted);">Vice: ${p.vicecandidate}</div>` : ''}
         <div class="party-slogan">"${p.slogan}"</div>
+        ${p.description ? `<div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.4rem;line-height:1.4;">${p.description}</div>` : ''}
       </div>`;
   });
 }
@@ -1259,8 +1321,9 @@ async function submitVote() {
 
   // Guardar local
   APP.parties[APP.selectedPartyIdx].votes = (p.votes || 0) + 1;
+  const voteTimestamp = new Date().toISOString();
   const studentIdx = APP.students.findIndex(s => s.code === APP.currentVoter.code);
-  if (studentIdx >= 0) APP.students[studentIdx].voted = true;
+  if (studentIdx >= 0) { APP.students[studentIdx].voted = true; APP.students[studentIdx].voteTime = voteTimestamp; }
   save();
 
   // Sync a Google Sheets
@@ -1318,6 +1381,8 @@ function loginAdmin() {
     document.getElementById('admin-dashboard').style.display = 'block';
     document.getElementById('sheets-url-input').value = APP.sheetUrl;
     document.getElementById('voting-toggle').checked = APP.votingOpen;
+    document.getElementById('s-school').value = APP.schoolName || 'Colegio Claretiano';
+    document.getElementById('s-year').value = APP.schoolYear || '2025';
     refreshResults();
     // Iniciar auto-refresh
     clearInterval(_autoRefreshTimer);
@@ -1433,20 +1498,53 @@ async function refreshResults() {
 // ═══════════════════════════════════════
 // PARTIDOS ADMIN
 // ═══════════════════════════════════════
+// ── Imagen base64 temporal mientras edita ──
+let _currentPartyImg = null;
+
+function previewPartyImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('⚠️ La imagen supera los 2MB'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _currentPartyImg = e.target.result;
+    document.getElementById('img-preview').src = _currentPartyImg;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+    document.getElementById('img-filename').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPartyImage() {
+  _currentPartyImg = null;
+  document.getElementById('img-preview').src = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-placeholder').style.display = 'flex';
+  document.getElementById('img-filename').textContent = '';
+  document.getElementById('pf-img-input').value = '';
+}
+
 function renderPartiesAdmin() {
   const list = document.getElementById('admin-parties-list');
   if (!APP.parties.length) {
     list.innerHTML = '<div class="empty-state"><div class="big">🏛️</div>No hay partidos aún</div>';
     return;
   }
-  list.innerHTML = APP.parties.map((p, i) => `
+  list.innerHTML = APP.parties.map((p, i) => {
+    const imgHtml = p.image
+      ? `<img src="${p.image}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid var(--border);">`
+      : `<div class="color-preview" style="background:${p.color}20;font-size:22px;">${p.emoji || '🏛️'}</div>`;
+    return `
     <div class="party-admin-card">
       <div class="party-admin-top">
-        <div class="color-preview" style="background:${p.color}20;">${p.emoji || '🏛️'}</div>
+        ${imgHtml}
         <div>
           <div style="font-weight:600;">${p.name}</div>
-          <div style="font-size:0.83rem;color:var(--text-muted);">${p.candidate} · "${p.slogan}"</div>
-          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">
+          <div style="font-size:0.83rem;color:var(--text-muted);">${p.candidate}${p.vicecandidate ? ' · Vice: ' + p.vicecandidate : ''}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);font-style:italic;">"${p.slogan}"</div>
+          ${p.description ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">${p.description}</div>` : ''}
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};vertical-align:middle;"></span>
             ${p.votes || 0} votos
           </div>
@@ -1456,16 +1554,18 @@ function renderPartiesAdmin() {
         <button class="btn-sm" onclick="editParty(${i})">✏️ Editar</button>
         <button class="btn-sm del" onclick="deleteParty(${i})">🗑️</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function openPartyForm(isEdit = false) {
   document.getElementById('party-form-card').style.display = 'block';
   document.getElementById('party-form-title').textContent = isEdit ? '✏️ Editar partido' : '➕ Nuevo partido';
   if (!isEdit) {
-    ['pf-name','pf-candidate','pf-slogan','pf-emoji'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('pf-color').value = '#002B7F';
+    ['pf-name','pf-candidate','pf-vicecandidate','pf-slogan','pf-emoji','pf-description'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pf-color').value = '#1A3A8F';
     document.getElementById('edit-party-idx').value = '-1';
+    clearPartyImage();
   }
   document.getElementById('party-form-card').scrollIntoView({ behavior: 'smooth' });
 }
@@ -1474,22 +1574,37 @@ function editParty(i) {
   const p = APP.parties[i];
   document.getElementById('pf-name').value = p.name;
   document.getElementById('pf-candidate').value = p.candidate;
+  document.getElementById('pf-vicecandidate').value = p.vicecandidate || '';
   document.getElementById('pf-slogan').value = p.slogan;
   document.getElementById('pf-color').value = p.color;
   document.getElementById('pf-emoji').value = p.emoji || '';
+  document.getElementById('pf-description').value = p.description || '';
   document.getElementById('edit-party-idx').value = i;
+  // Cargar imagen existente
+  if (p.image) {
+    _currentPartyImg = p.image;
+    document.getElementById('img-preview').src = p.image;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+    document.getElementById('img-filename').textContent = 'Imagen actual';
+  } else {
+    clearPartyImage();
+  }
   openPartyForm(true);
 }
 
 function saveParty() {
   const idx = parseInt(document.getElementById('edit-party-idx').value);
   const party = {
-    name: document.getElementById('pf-name').value.trim(),
-    candidate: document.getElementById('pf-candidate').value.trim(),
-    slogan: document.getElementById('pf-slogan').value.trim(),
-    color: document.getElementById('pf-color').value,
-    emoji: document.getElementById('pf-emoji').value.trim() || '🏛️',
-    votes: idx >= 0 ? APP.parties[idx].votes : 0,
+    name:          document.getElementById('pf-name').value.trim(),
+    candidate:     document.getElementById('pf-candidate').value.trim(),
+    vicecandidate: document.getElementById('pf-vicecandidate').value.trim(),
+    slogan:        document.getElementById('pf-slogan').value.trim(),
+    description:   document.getElementById('pf-description').value.trim(),
+    color:         document.getElementById('pf-color').value,
+    emoji:         document.getElementById('pf-emoji').value.trim() || '🏛️',
+    image:         _currentPartyImg || (idx >= 0 ? APP.parties[idx].image : null),
+    votes:         idx >= 0 ? APP.parties[idx].votes : 0,
   };
   if (!party.name || !party.candidate) { showToast('⚠️ Completá nombre y candidato/a'); return; }
   if (idx >= 0) APP.parties[idx] = party;
@@ -1502,7 +1617,10 @@ function saveParty() {
 
 function cancelPartyForm() {
   document.getElementById('party-form-card').style.display = 'none';
+  clearPartyImage();
 }
+
+
 
 function deleteParty(i) {
   if (!confirm(`¿Eliminar "${APP.parties[i].name}"? Se perderán sus votos.`)) return;
@@ -1548,7 +1666,17 @@ function renderStudentsTable() {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay estudiantes</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map((s, i) => `
+  tbody.innerHTML = filtered.map((s, i) => {
+    let voteTimeStr = '—';
+    if (s.voteTime) {
+      try {
+        const d = new Date(s.voteTime);
+        voteTimeStr = d.toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' });
+      } catch(e) { voteTimeStr = s.voteTime; }
+    } else if (s.voted) {
+      voteTimeStr = 'Sin registro';
+    }
+    return `
     <tr>
       <td style="color:var(--text-muted)">${i+1}</td>
       <td>${s.name}</td>
@@ -1558,10 +1686,12 @@ function renderStudentsTable() {
           ${s.voted ? '✓ Votó' : '○ Pendiente'}
         </span>
       </td>
+      <td style="font-size:0.8rem;color:var(--text-muted);">${voteTimeStr}</td>
       <td>
         <button class="btn-sm del" onclick="deleteStudent('${s.code}')">✕</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function deleteStudent(code) {
@@ -1577,9 +1707,11 @@ function generateCodesExample() {
 
 function exportStudentCodes() {
   if (!APP.students.length) { showToast('No hay estudiantes cargados'); return; }
-  let csv = 'Nombre,Código,Estado\n';
+  let csv = 'Nombre,Código,Estado,Fecha y hora del voto\n';
   APP.students.forEach(s => {
-    csv += `"${s.name}","${s.code}","${s.voted ? 'Votó' : 'Pendiente'}"\n`;
+    let vt = '';
+    if (s.voteTime) { try { vt = new Date(s.voteTime).toLocaleString('es-CR'); } catch(e){ vt = s.voteTime; } }
+    csv += `"${s.name}","${s.code}","${s.voted ? 'Votó' : 'Pendiente'}","${vt}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -1599,7 +1731,10 @@ function toggleVoting() {
 
 function saveSettings() {
   APP.schoolName = document.getElementById('s-school').value.trim();
+  APP.schoolYear = document.getElementById('s-year').value.trim();
   const newPwd = document.getElementById('s-newpwd').value.trim();
+  const headerSub = document.querySelector('.header h1 span');
+  if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
   if (newPwd) APP.adminPwd = newPwd;
   save();
   showToast('Cambios guardados ✓');
@@ -1818,6 +1953,8 @@ function showToast(msg) {
 // Cargar URL guardada al iniciar
 window.onload = () => {
   if (APP.sheetUrl) document.getElementById('sheets-url-input').value = APP.sheetUrl;
+  const headerSub = document.querySelector('.header h1 span');
+  if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
 };
 </script>
 </body>
