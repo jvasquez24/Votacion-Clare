@@ -5,6 +5,175 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Votaciones Estudiantiles — Colegio Claretiano</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, get, update,
+         onValue, push, runTransaction, child }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ═══════════════════════════════════════════════════════════
+// FIREBASE — inicialización
+// ═══════════════════════════════════════════════════════════
+let db = null;
+let _fbListeners = [];  // para desuscribir listeners si hace falta
+
+function initFirebase(config) {
+  try {
+    const app = initializeApp(config);
+    db = getDatabase(app);
+    console.log('Firebase conectado ✓');
+    APP.firebaseReady = true;
+    _onFirebaseReady();
+    return true;
+  } catch(e) {
+    console.error('Firebase error:', e);
+    return false;
+  }
+}
+
+// Llamada cuando Firebase está listo → escuchar cambios en tiempo real
+function _onFirebaseReady() {
+  // Escuchar config (votingOpen, schoolName, schoolYear)
+  onValue(ref(db, 'config'), snap => {
+    const cfg = snap.val();
+    if (!cfg) return;
+    if (cfg.votingOpen !== undefined) {
+      APP.votingOpen = cfg.votingOpen;
+      const toggle = document.getElementById('voting-toggle');
+      if (toggle) toggle.checked = APP.votingOpen;
+      const txt = document.getElementById('voting-status-text');
+      if (txt) txt.textContent = APP.votingOpen ? 'Votación activa' : 'Votación cerrada';
+    }
+    if (cfg.schoolName) { APP.schoolName = cfg.schoolName; _updateHeaderSub(); }
+    if (cfg.schoolYear) { APP.schoolYear = cfg.schoolYear; _updateHeaderSub(); }
+  });
+
+  // Escuchar partidos en tiempo real
+  onValue(ref(db, 'parties'), snap => {
+    const data = snap.val();
+    if (!data) return;
+    // Convertir objeto Firebase a array manteniendo orden
+    const arr = Object.entries(data)
+      .sort(([,a],[,b]) => (a._order||0) - (b._order||0))
+      .map(([id, p]) => ({ ...p, _fbId: id }));
+    if (arr.length) {
+      APP.parties = arr;
+      save();
+      // Refrescar UI si el panel está abierto
+      if (document.getElementById('tab-parties')?.classList.contains('active')) renderPartiesAdmin();
+      if (document.getElementById('results-bars')) refreshResultsLocal();
+    }
+  });
+
+  // Escuchar estudiantes en tiempo real
+  onValue(ref(db, 'students'), snap => {
+    const data = snap.val();
+    if (!data) return;
+    const arr = Object.entries(data).map(([id, s]) => ({ ...s, _fbId: id }));
+    APP.students = arr;
+    save();
+    if (document.getElementById('students-tbody')) renderStudentsTable();
+    updateSyncBar('ok', '✓ Firebase — tiempo real', new Date().toLocaleString('es-CR'));
+  });
+}
+
+function _updateHeaderSub() {
+  const el = document.querySelector('.header h1 span');
+  if (el) el.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
+}
+
+// ── Firebase: guardar/actualizar partido ─────────────────
+async function fbSaveParty(party, fbId) {
+  if (!db) return false;
+  try {
+    if (fbId) {
+      await update(ref(db, 'parties/' + fbId), party);
+    } else {
+      const newRef = push(ref(db, 'parties'));
+      await set(newRef, { ...party, _order: Date.now() });
+    }
+    return true;
+  } catch(e) { console.error('fbSaveParty:', e); return false; }
+}
+
+async function fbDeleteParty(fbId) {
+  if (!db || !fbId) return false;
+  try {
+    await set(ref(db, 'parties/' + fbId), null);
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── Firebase: cargar estudiantes (ya viene por onValue) ──
+async function fbBulkSaveStudents(students) {
+  if (!db) return false;
+  try {
+    // Limpiar y reescribir todos
+    await set(ref(db, 'students'), null);
+    const updates = {};
+    students.forEach(s => {
+      const key = s.code.toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+      updates[key] = { name: s.name, code: s.code.toUpperCase(), voted: s.voted || false, voteTime: s.voteTime || '' };
+    });
+    await set(ref(db, 'students'), updates);
+    return true;
+  } catch(e) { console.error('fbBulkSave:', e); return false; }
+}
+
+// ── Firebase: registrar voto (transacción atómica) ───────
+async function fbRegisterVote(code, partyFbId, partyName, voterName, timestamp) {
+  if (!db) return { ok: false, error: 'Sin Firebase' };
+  try {
+    const studentKey = code.toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+    const studentRef = ref(db, 'students/' + studentKey);
+
+    // Verificar que no haya votado (lectura rápida)
+    const snap = await get(studentRef);
+    const st = snap.val();
+    if (st && st.voted) return { ok: false, error: 'Ya votó' };
+
+    // Marcar estudiante como votó
+    await update(studentRef, { voted: true, voteTime: timestamp, votedParty: partyName });
+
+    // Incrementar votos del partido (transacción atómica)
+    if (partyFbId) {
+      await runTransaction(ref(db, 'parties/' + partyFbId + '/votes'), current => (current || 0) + 1);
+    }
+
+    // Registrar en historial de votos
+    await push(ref(db, 'votes'), {
+      code, name: voterName, party: partyName, timestamp
+    });
+
+    // Actualizar lastUpdate en config
+    await update(ref(db, 'config'), { lastUpdate: timestamp });
+
+    return { ok: true };
+  } catch(e) { console.error('fbVote:', e); return { ok: false, error: e.message }; }
+}
+
+// ── Firebase: guardar config ─────────────────────────────
+async function fbSaveConfig(cfg) {
+  if (!db) return;
+  try { await update(ref(db, 'config'), cfg); } catch(e) {}
+}
+
+// ── Firebase: check código (lectura puntual rápida) ──────
+async function fbCheckCode(code) {
+  if (!db) return null;
+  try {
+    const key  = code.toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+    const snap = await get(ref(db, 'students/' + key));
+    const st   = snap.val();
+    if (!st) return { found: false };
+    return { found: true, voted: !!st.voted, name: st.name, code: st.code };
+  } catch(e) { return null; }
+}
+
+// Exponer funciones al scope global
+window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
+              fbRegisterVote, fbSaveConfig, fbCheckCode };
+</script>
 <style>
   :root {
     --cr-azul: #1A3A8F;
@@ -912,25 +1081,45 @@
     <!-- Dashboard admin -->
     <div id="admin-dashboard" style="display:none;">
 
-      <!-- Config Google Sheets -->
-      <div class="sheets-config">
-        <h4>📊 Configuración de Google Sheets (Base de datos)</h4>
-        <p>Pegá la URL de tu Google Apps Script aquí. Los votos y estudiantes se guardarán en tu Google Sheet.</p>
-        <div class="form-row" style="align-items:flex-end; gap:0.75rem;">
-          <div class="form-group" style="margin-bottom:0; flex:1;">
-            <label>URL del Apps Script Web App</label>
-            <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/..." value="">
+      <!-- Config Firebase -->
+      <div class="sheets-config" id="firebase-config-panel">
+        <h4>🔥 Configuración de Firebase (Base de datos en tiempo real)</h4>
+        <div id="fb-status-row" style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;">
+          <span id="fb-status-dot" style="width:10px;height:10px;border-radius:50%;background:#9CA3AF;display:inline-block;"></span>
+          <span id="fb-status-text" style="font-size:0.82rem;color:var(--text-muted);">No conectado</span>
+        </div>
+        <p>Pegá tu configuración de Firebase para sincronización en tiempo real (gratis con el plan Spark).</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="text" id="fb-apikey" placeholder="AIzaSy...">
           </div>
-          <button class="btn-primary" style="height:40px; white-space:nowrap;" onclick="saveSheetUrl()">Guardar URL</button>
+          <div class="form-group">
+            <label>Database URL</label>
+            <input type="text" id="fb-dburl" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Project ID</label>
+            <input type="text" id="fb-projectid" placeholder="tu-proyecto-12345">
+          </div>
+          <div class="form-group">
+            <label>App ID</label>
+            <input type="text" id="fb-appid" placeholder="1:123456:web:abcdef">
+          </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-top:0.5rem;">
+          <button class="btn-primary" onclick="connectFirebase()">🔥 Conectar Firebase</button>
+          <button class="btn-sm" onclick="clearFirebaseConfig()">✕ Limpiar</button>
         </div>
         <ul class="step-list" style="margin-top:1rem;">
-          <li>Ve a <a href="https://sheets.google.com" target="_blank" style="color:var(--cr-azul)">Google Sheets</a> y creá una hoja nueva</li>
-          <li>Abrí <span class="code-inline">Extensiones → Apps Script</span></li>
-          <li>Pegá el código del Apps Script (incluido abajo como descarga) y hacé clic en Implementar → Nueva implementación</li>
-          <li>Elegí tipo <span class="code-inline">Aplicación web</span>, ejecutar como <span class="code-inline">yo</span>, acceso <span class="code-inline">Cualquier persona</span></li>
-          <li>Copiá la URL generada y pegala arriba</li>
+          <li>Ve a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--cr-azul)">console.firebase.google.com</a> y creá un proyecto nuevo (gratis)</li>
+          <li>En el proyecto, clic en <span class="code-inline">⚙ Configuración → Tus apps → Agregar app web</span> y copiá los datos de configuración</li>
+          <li>En el menú izquierdo, activá <span class="code-inline">Realtime Database → Crear base de datos</span> — elegí <span class="code-inline">Modo de prueba</span> para empezar</li>
+          <li>Pegá los datos arriba y hacé clic en <strong>Conectar Firebase</strong></li>
+          <li>Una vez conectado, los datos se sincronizan en tiempo real en todos los dispositivos automáticamente ⚡</li>
         </ul>
-        <button class="btn-sm primary" style="margin-top:0.75rem;" onclick="downloadAppsScript()">⬇ Descargar código Apps Script</button>
       </div>
 
       <!-- Tabs -->
@@ -1158,7 +1347,7 @@
 // ═══════════════════════════════════════
 const APP = {
   // Config
-  sheetUrl: localStorage.getItem('sheetUrl') || '',
+  firebaseReady: false,
   adminPwd: localStorage.getItem('adminPwd') || 'admin123',
   votingOpen: JSON.parse(localStorage.getItem('votingOpen') ?? 'true'),
   schoolName: localStorage.getItem('schoolName') || 'Colegio Claretiano',
@@ -1208,146 +1397,174 @@ function save() {
   localStorage.setItem('votingOpen', JSON.stringify(APP.votingOpen));
   localStorage.setItem('schoolName', APP.schoolName);
   localStorage.setItem('schoolYear', APP.schoolYear || '2025');
-  if (APP.sheetUrl) localStorage.setItem('sheetUrl', APP.sheetUrl);
+  // Firebase config se guarda por separado en FB_CONFIG_KEY
 }
 
 // ═══════════════════════════════════════
-// GOOGLE SHEETS SYNC
+// FIREBASE — CONEXIÓN Y HELPERS
 // ═══════════════════════════════════════
-function saveSheetUrl() {
-  APP.sheetUrl = document.getElementById('sheets-url-input').value.trim();
-  localStorage.setItem('sheetUrl', APP.sheetUrl);
-  showToast('URL guardada correctamente ✓');
-}
+const FB_CONFIG_KEY = 'fbConfig';
 
-async function syncToSheet(action, data) {
-  if (!APP.sheetUrl) return null;
-  try {
-    const resp = await fetch(APP.sheetUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...data }),
-    });
-    return await resp.json();
-  } catch (e) {
-    console.warn('Sync falló:', e);
-    return null;
+function connectFirebase() {
+  const apiKey    = document.getElementById('fb-apikey').value.trim();
+  const databaseURL = document.getElementById('fb-dburl').value.trim();
+  const projectId = document.getElementById('fb-projectid').value.trim();
+  const appId     = document.getElementById('fb-appid').value.trim();
+
+  if (!apiKey || !databaseURL || !projectId || !appId) {
+    showToast('⚠️ Completá todos los campos de Firebase'); return;
+  }
+
+  const config = { apiKey, databaseURL, projectId, appId,
+    authDomain: projectId + '.firebaseapp.com',
+    storageBucket: projectId + '.appspot.com',
+    messagingSenderId: '' };
+
+  localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(config));
+
+  const ok = window.FB.initFirebase(config);
+  if (ok) {
+    setFbStatus('connecting');
+    setTimeout(() => {
+      if (APP.firebaseReady) {
+        setFbStatus('ok');
+        showToast('🔥 Firebase conectado correctamente');
+        // Subir datos locales si hay partidos y estudiantes
+        _pushLocalDataToFirebase();
+      }
+    }, 2000);
   }
 }
 
-async function fetchFromSheet(action, params = {}) {
-  if (!APP.sheetUrl) return null;
-  try {
-    const url = new URL(APP.sheetUrl);
-    url.searchParams.set('action', action);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    const resp = await fetch(url);
-    return await resp.json();
-  } catch (e) {
-    console.warn('Fetch falló:', e);
-    return null;
+function clearFirebaseConfig() {
+  localStorage.removeItem(FB_CONFIG_KEY);
+  ['fb-apikey','fb-dburl','fb-projectid','fb-appid'].forEach(id => document.getElementById(id).value = '');
+  setFbStatus('off');
+  showToast('Configuración de Firebase eliminada');
+}
+
+function setFbStatus(state) {
+  const dot  = document.getElementById('fb-status-dot');
+  const text = document.getElementById('fb-status-text');
+  if (!dot) return;
+  const states = {
+    ok:          { color: '#1B7A4A', label: '✓ Conectado — tiempo real activo' },
+    connecting:  { color: '#F5C400', label: 'Conectando...' },
+    error:       { color: '#C8181E', label: 'Error de conexión' },
+    off:         { color: '#9CA3AF', label: 'No conectado' },
+  };
+  const s = states[state] || states.off;
+  dot.style.background = s.color;
+  dot.style.boxShadow  = state === 'ok' ? '0 0 0 3px #E8F5EE' : 'none';
+  text.textContent = s.label;
+}
+
+function updateSyncBar(state, label, time) {
+  const dot   = document.getElementById('sync-dot');
+  const lbl   = document.getElementById('sync-label');
+  const timeEl = document.getElementById('sync-time');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + state;
+  if (lbl) lbl.textContent = label;
+  if (timeEl && time) timeEl.textContent = time;
+}
+
+// Subir datos locales a Firebase si Firebase acaba de conectarse
+async function _pushLocalDataToFirebase() {
+  if (!window.FB || !APP.firebaseReady) return;
+  if (APP.parties.length) {
+    for (let i = 0; i < APP.parties.length; i++) {
+      const p = { ...APP.parties[i] };
+      delete p._fbId;
+      if (!p._fbId) await window.FB.fbSaveParty(p, null);
+    }
+  }
+  if (APP.students.length) {
+    await window.FB.fbBulkSaveStudents(APP.students);
   }
 }
 
 // ═══════════════════════════════════════
 // LOGIN VOTANTE
 // ═══════════════════════════════════════
-async function loginVoter() {
+function loginVoter() {
   const input = document.getElementById('voter-code-input');
   const code  = input.value.trim().toUpperCase();
   const msgEl = document.getElementById('login-msg');
   const btn   = document.querySelector('#voter-login .btn-primary');
 
-  // ── Validaciones básicas ──────────────────────────────
+  // ── Validaciones básicas (instantáneas) ──────────────
   if (!code) {
     showMsg(msgEl, '⚠️ Por favor ingresá tu código antes de continuar.', 'error');
-    input.focus();
-    return;
+    input.focus(); return;
   }
-
-  // Formato mínimo: al menos 3 caracteres
   if (code.length < 3) {
     showMsg(msgEl, '❌ El código es demasiado corto. Revisá que esté completo.', 'error');
-    input.focus();
-    return;
+    input.focus(); return;
   }
-
   if (!APP.votingOpen) {
-    showMsg(msgEl, '⏸ La votación está cerrada en este momento. Consultá con la dirección.', 'error');
-    return;
+    showMsg(msgEl, '⏸ La votación está cerrada en este momento.', 'error'); return;
   }
-
   if (!APP.parties.length) {
-    showMsg(msgEl, '⚠️ No hay partidos registrados. Contactá al administrador.', 'error');
+    showMsg(msgEl, '⚠️ No hay partidos registrados. Contactá al administrador.', 'error'); return;
+  }
+
+  // ── Validación LOCAL primero (instantánea, sin red) ──
+  if (APP.students.length > 0) {
+    const found = APP.students.find(s => s.code.toUpperCase() === code);
+    if (!found) {
+      showMsg(msgEl, '❌ Código no válido. Revisá que esté escrito correctamente.', 'error');
+      input.select(); return;
+    }
+    if (found.voted) {
+      showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo podés votar una vez.', 'error'); return;
+    }
+    // ✅ OK localmente — entrar de inmediato
+    APP.currentVoter = found;
+    _enterBallot();
     return;
   }
 
-  // ── Estado: verificando ───────────────────────────────
-  btn.disabled = true;
-  btn.textContent = 'Verificando…';
-  showMsg(msgEl, '🔍 Verificando código...', 'info');
-
-  let student  = null;
-  let fromSheet = false;
-
-  // ── 1. Verificar contra Google Sheets (si está configurado) ──
-  if (APP.sheetUrl) {
-    try {
-      const r = await fetchFromSheet('checkCode', { code });
-      if (r && !r.error) {
-        fromSheet = true;
+  // ── Sin lista local: consultar Firebase ──────────────
+  if (APP.firebaseReady && window.FB) {
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    showMsg(msgEl, '🔍 Verificando...', 'info');
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000));
+    Promise.race([window.FB.fbCheckCode(code), timeout])
+      .then(r => {
+        btn.disabled = false; btn.textContent = 'Entrar';
+        if (!r) { _enterAsDemo(code); return; }
         if (!r.found) {
-          btn.disabled = false; btn.textContent = 'Entrar';
-          showMsg(msgEl, '❌ Código no encontrado. Revisá que esté bien escrito o consultá con la dirección.', 'error');
-          input.select();
-          return;
+          showMsg(msgEl, '❌ Código no encontrado. Revisá que esté bien escrito.', 'error');
+          input.select(); return;
         }
         if (r.voted) {
-          btn.disabled = false; btn.textContent = 'Entrar';
-          showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo se puede votar una vez.', 'error');
-          return;
+          showMsg(msgEl, '⚠️ Este código ya fue utilizado.', 'error'); return;
         }
-        student = { name: r.name || 'Estudiante', code, voted: false };
-      }
-      // Si r.error o no hay respuesta útil → caer a validación local
-    } catch(e) {
-      // Sin conexión → caer a validación local
-    }
+        APP.currentVoter = { name: r.name || 'Estudiante', code, voted: false };
+        _enterBallot();
+      })
+      .catch(() => { btn.disabled = false; btn.textContent = 'Entrar'; _enterAsDemo(code); });
+    return;
   }
 
-  // ── 2. Verificar en lista local (si no vino del sheet) ──
-  if (!fromSheet) {
-    if (APP.students.length === 0) {
-      // No hay lista cargada y no hay sheet → advertir pero dejar pasar (modo demo)
-      student = { name: 'Estudiante', code, voted: false };
-    } else {
-      const found = APP.students.find(s => s.code.toUpperCase() === code);
-      if (!found) {
-        btn.disabled = false; btn.textContent = 'Entrar';
-        showMsg(msgEl, '❌ Código no válido. Revisá que esté escrito correctamente.', 'error');
-        input.select();
-        return;
-      }
-      if (found.voted) {
-        btn.disabled = false; btn.textContent = 'Entrar';
-        showMsg(msgEl, '⚠️ Este código ya fue utilizado. Solo podés votar una vez.', 'error');
-        return;
-      }
-      student = found;
-    }
-  }
+  // ── Sin nada: modo demo ───────────────────────────────
+  _enterAsDemo(code);
+}
 
-  // ── 3. Todo OK → mostrar papeleta ────────────────────
-  btn.disabled = false; btn.textContent = 'Entrar';
+function _enterBallot() {
+  const msgEl = document.getElementById('login-msg');
   msgEl.textContent = ''; msgEl.className = '';
-
-  APP.currentVoter = student;
   APP.selectedPartyIdx = -1;
-
   document.getElementById('voter-login').style.display = 'none';
   document.getElementById('voter-ballot').style.display = 'block';
   document.getElementById('voter-welcome-tag').textContent = `Hola, ${APP.currentVoter.name || 'Estudiante'}`;
-
   renderBallot();
+}
+
+function _enterAsDemo(code) {
+  APP.currentVoter = { name: 'Estudiante', code, voted: false };
+  _enterBallot();
 }
 
 // ═══════════════════════════════════════
@@ -1396,48 +1613,41 @@ function closeConfirm() {
   document.getElementById('confirm-overlay').classList.remove('open');
 }
 
-async function submitVote() {
+function submitVote() {
   const btn = document.getElementById('btn-confirm-vote');
   btn.disabled = true;
-  btn.textContent = 'Registrando...';
 
-  const p = APP.parties[APP.selectedPartyIdx];
+  const p             = APP.parties[APP.selectedPartyIdx];
   const voteTimestamp = new Date().toISOString();
-  const voterCode = APP.currentVoter.code.toUpperCase();
+  const voterCode     = APP.currentVoter.code.toUpperCase();
 
-  // ── Guardar localmente ────────────────────────────────
+  // ── 1. Guardar local INMEDIATAMENTE ──────────────────
   APP.parties[APP.selectedPartyIdx].votes = (p.votes || 0) + 1;
-
-  // Buscar por código normalizado (mayúsculas)
   const studentIdx = APP.students.findIndex(s => s.code.toUpperCase() === voterCode);
   if (studentIdx >= 0) {
     APP.students[studentIdx].voted    = true;
     APP.students[studentIdx].voteTime = voteTimestamp;
   } else {
-    // Si no estaba en la lista local (vino del sheet), agregarlo con los datos
-    APP.students.push({
-      name:      APP.currentVoter.name || 'Estudiante',
-      code:      voterCode,
-      voted:     true,
-      voteTime:  voteTimestamp,
-    });
+    APP.students.push({ name: APP.currentVoter.name || 'Estudiante',
+      code: voterCode, voted: true, voteTime: voteTimestamp });
   }
   save();
 
-  // ── Sync a Google Sheets ─────────────────────────────
-  if (APP.sheetUrl) {
-    await syncToSheet('vote', {
-      code:      voterCode,
-      party:     p.name,
-      name:      APP.currentVoter.name || '',
-      timestamp: voteTimestamp,
-    });
-  }
-
+  // ── 2. Mostrar éxito SIN esperar a Firebase ───────────
   closeConfirm();
   document.getElementById('voter-ballot').style.display = 'none';
   document.getElementById('vote-success').classList.add('show');
   startCountdown();
+  btn.disabled = false;
+
+  // ── 3. Sync a Firebase en background (< 200ms normalmente) ──
+  if (APP.firebaseReady && window.FB) {
+    const partyFbId = p._fbId || null;
+    window.FB.fbRegisterVote(voterCode, partyFbId, p.name,
+      APP.currentVoter.name || '', voteTimestamp)
+      .then(r => { if (!r.ok) console.warn('Vote sync warning:', r.error); })
+      .catch(e => console.warn('Vote sync error:', e));
+  }
 }
 
 function startCountdown() {
@@ -1534,69 +1744,22 @@ function formatSyncTime(iso) {
   } catch { return iso; }
 }
 
-async function refreshResults() {
-  const btn = document.getElementById('btn-refresh-main');
-  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
-  setSyncState('spin', 'Actualizando…', '');
+// Actualizar UI de resultados desde APP (local, sin red)
+function refreshResultsLocal() {
+  const parties  = APP.parties;
+  const students = APP.students;
+  const total    = parties.reduce((s, p) => s + (p.votes || 0), 0);
 
-  let parties  = APP.parties;
-  let students = APP.students;
-  let lastUpdate = null;
-  let fromSheet  = false;
-
-  if (APP.sheetUrl) {
-    try {
-      const r = await fetchFromSheet('results');
-      if (r && !r.error) {
-        if (r.parties  && r.parties.length)  { parties  = r.parties;  APP.parties  = parties; }
-        if (r.students && r.students.length) {
-          // Merge: conservar voteTime del sheet sobre el local
-          r.students.forEach(sheetSt => {
-            const localIdx = APP.students.findIndex(ls => ls.code.toUpperCase() === sheetSt.code.toUpperCase());
-            if (localIdx >= 0) {
-              APP.students[localIdx].voted    = sheetSt.voted;
-              APP.students[localIdx].voteTime = sheetSt.voteTime || APP.students[localIdx].voteTime;
-            } else {
-              APP.students.push(sheetSt);
-            }
-          });
-          students = APP.students;
-        }
-        if (r.lastUpdate) lastUpdate = r.lastUpdate;
-        fromSheet = true;
-        save();
-      }
-    } catch(e) { /* usa datos locales */ }
-  }
-
-  if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
-
-  if (fromSheet && lastUpdate) {
-    setSyncState('ok', '✓ Sincronizado con Google Sheets', formatSyncTime(lastUpdate));
-  } else if (fromSheet) {
-    const now = new Date().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' });
-    setSyncState('ok', '✓ Sincronizado con Google Sheets', now);
-  } else if (APP.sheetUrl) {
-    setSyncState('err', '⚠ Sin conexión — mostrando datos locales', '');
-  } else {
-    setSyncState('local', 'Datos locales (sin Google Sheets configurado)', '');
-  }
-
-  const total = parties.reduce((s, p) => s + (p.votes || 0), 0);
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-students').textContent = students.length;
-  document.getElementById('stat-pct').textContent = students.length > 0
+  const elTotal = document.getElementById('stat-total');
+  const elStud  = document.getElementById('stat-students');
+  const elPct   = document.getElementById('stat-pct');
+  if (elTotal) elTotal.textContent = total;
+  if (elStud)  elStud.textContent  = students.length;
+  if (elPct)   elPct.textContent   = students.length > 0
     ? Math.round((total / students.length) * 100) + '%' : '0%';
 
-  // Último voto (del sheet si hay datos de votos)
-  if (lastUpdate) {
-    document.getElementById('stat-last-vote').textContent = '';
-    document.getElementById('stat-last-vote').innerHTML =
-      '<span class="sheet-update-badge">📋 ' + formatSyncTime(lastUpdate) + '</span>';
-    document.getElementById('stat-last-vote').parentElement.querySelector('.stat-l').textContent = 'Última actualización Sheet';
-  }
-
   const barsEl = document.getElementById('results-bars');
+  if (!barsEl) return;
   if (total === 0) {
     barsEl.innerHTML = '<div class="empty-state"><div class="big">📊</div>Aún no hay votos registrados</div>';
     return;
@@ -1617,6 +1780,26 @@ async function refreshResults() {
         </div>
       </div>`;
   }).join('');
+}
+
+// refreshResults: con Firebase los datos ya llegan por onValue,
+// este botón solo refresca la UI visualmente
+async function refreshResults() {
+  const btn = document.getElementById('btn-refresh-main');
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+
+  if (APP.firebaseReady) {
+    setSyncState('ok', '✓ Firebase — tiempo real activo',
+      new Date().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' }));
+  } else {
+    setSyncState('local', 'Datos locales (Firebase no configurado)', '');
+  }
+
+  refreshResultsLocal();
+
+  setTimeout(() => {
+    if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
+  }, 400);
 }
 
 // ═══════════════════════════════════════
@@ -1731,12 +1914,25 @@ function saveParty() {
     votes:         idx >= 0 ? APP.parties[idx].votes : 0,
   };
   if (!party.name || !party.candidate) { showToast('⚠️ Completá nombre y candidato/a'); return; }
-  if (idx >= 0) APP.parties[idx] = party;
-  else APP.parties.push(party);
+  if (idx >= 0) {
+    const fbId = APP.parties[idx]._fbId;
+    APP.parties[idx] = { ...party, _fbId: fbId };
+    if (APP.firebaseReady && window.FB) {
+      const p2 = { ...party }; delete p2._fbId;
+      window.FB.fbSaveParty(p2, fbId).then(() => showToast('Partido guardado ✓ (Firebase)'));
+    }
+  } else {
+    if (APP.firebaseReady && window.FB) {
+      const p2 = { ...party }; delete p2._fbId;
+      window.FB.fbSaveParty(p2, null).then(() => showToast('Partido guardado ✓ (Firebase)'));
+    } else {
+      APP.parties.push(party);
+    }
+  }
   save();
   cancelPartyForm();
   renderPartiesAdmin();
-  showToast('Partido guardado ✓');
+  if (!APP.firebaseReady) showToast('Partido guardado ✓');
 }
 
 function cancelPartyForm() {
@@ -1774,9 +1970,11 @@ function bulkAddStudents() {
   renderStudentsTable();
   document.getElementById('students-bulk-input').value = '';
   showToast(`✓ ${added} estudiante(s) agregados`);
-
-  // Sync a sheets
-  if (APP.sheetUrl) syncToSheet('updateStudents', { students: APP.students });
+  // Sync a Firebase
+  if (APP.firebaseReady && window.FB) {
+    window.FB.fbBulkSaveStudents(APP.students)
+      .then(() => showToast(`✓ ${added} estudiante(s) subidos a Firebase`));
+  }
 }
 
 function renderStudentsTable() {
@@ -1860,6 +2058,7 @@ function toggleVoting() {
   APP.votingOpen = document.getElementById('voting-toggle').checked;
   document.getElementById('voting-status-text').textContent = APP.votingOpen ? 'Votación activa' : 'Votación cerrada';
   save();
+  if (APP.firebaseReady && window.FB) window.FB.fbSaveConfig({ votingOpen: APP.votingOpen });
 }
 
 function saveSettings() {
@@ -1891,174 +2090,7 @@ function clearStudents() {
 // ═══════════════════════════════════════
 // APPS SCRIPT — CÓDIGO PARA DESCARGAR
 // ═══════════════════════════════════════
-function downloadAppsScript() {
-  const lines = [
-    '// ═══════════════════════════════════════════════════════════',
-    '// APPS SCRIPT — SISTEMA DE VOTACIONES COLEGIO CLARETIANO',
-    '// 1. Pegá este código en Extensiones > Apps Script de tu Google Sheet',
-    '// 2. Implementar > Nueva implementación > Aplicación web',
-    '//    - Ejecutar como: Yo',
-    '//    - Acceso: Cualquier persona',
-    '// 3. Copiá la URL y pegála en el panel de administración',
-    '// ═══════════════════════════════════════════════════════════',
-    '',
-    "const SHEET_VOTES    = 'Votos';",
-    "const SHEET_STUDENTS = 'Estudiantes';",
-    "const SHEET_PARTIES  = 'Partidos';",
-    "const SHEET_CONFIG   = 'Config';",
-    '',
-    'function respond(data) {',
-    '  return ContentService',
-    '    .createTextOutput(JSON.stringify(data))',
-    '    .setMimeType(ContentService.MimeType.JSON);',
-    '}',
-    '',
-    'function getSheet(name) {',
-    '  const ss = SpreadsheetApp.getActiveSpreadsheet();',
-    '  let sheet = ss.getSheetByName(name);',
-    '  if (!sheet) {',
-    '    sheet = ss.insertSheet(name);',
-    "    if (name === SHEET_VOTES)    sheet.appendRow(['Timestamp', 'Codigo', 'Partido', 'Nombre']);",
-    "    if (name === SHEET_STUDENTS) sheet.appendRow(['Nombre', 'Codigo', 'Voto', 'Timestamp Voto']);",
-    "    if (name === SHEET_PARTIES)  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);",
-    "    if (name === SHEET_CONFIG)   sheet.appendRow(['Clave', 'Valor']);",
-    '  }',
-    '  return sheet;',
-    '}',
-    '',
-    'function setLastUpdate(ts) {',
-    '  const sheet = getSheet(SHEET_CONFIG);',
-    '  const data  = sheet.getDataRange().getValues();',
-    '  for (let i = 1; i < data.length; i++) {',
-    "    if (data[i][0] === 'lastUpdate') { sheet.getRange(i+1,2).setValue(ts); return; }",
-    '  }',
-    "  sheet.appendRow(['lastUpdate', ts]);",
-    '}',
-    '',
-    'function getLastUpdate() {',
-    '  const sheet = getSheet(SHEET_CONFIG);',
-    '  const data  = sheet.getDataRange().getValues();',
-    '  for (let i = 1; i < data.length; i++) {',
-    "    if (data[i][0] === 'lastUpdate') return data[i][1] ? data[i][1].toString() : null;",
-    '  }',
-    '  return null;',
-    '}',
-    '',
-    'function doGet(e) {',
-    '  const action = e.parameter.action;',
-    '  try {',
-    "    if (action === 'checkCode') return respond(checkCode(e.parameter.code));",
-    "    if (action === 'results')   return respond(getResults());",
-    "    return respond({ error: 'Accion no reconocida' });",
-    '  } catch(err) { return respond({ error: err.message }); }',
-    '}',
-    '',
-    'function doPost(e) {',
-    '  const data = JSON.parse(e.postData.contents);',
-    '  try {',
-    "    if (data.action === 'vote')           return respond(registerVote(data));",
-    "    if (data.action === 'updateStudents') return respond(updateStudents(data.students));",
-    "    if (data.action === 'updateParties')  return respond(updateParties(data.parties));",
-    "    return respond({ error: 'Accion no reconocida' });",
-    '  } catch(err) { return respond({ error: err.message }); }',
-    '}',
-    '',
-    'function checkCode(code) {',
-    '  const sheet = getSheet(SHEET_STUDENTS);',
-    '  const data  = sheet.getDataRange().getValues();',
-    '  for (let i = 1; i < data.length; i++) {',
-    '    if (data[i][1] && data[i][1].toString().toUpperCase() === code.toUpperCase()) {',
-    "      return { found: true, voted: data[i][2] === true || data[i][2] === 'TRUE', name: data[i][0], row: i+1 };",
-    '    }',
-    '  }',
-    '  return { found: false };',
-    '}',
-    '',
-    'function registerVote(data) {',
-    '  const check = checkCode(data.code);',
-    "  if (!check.found) return { ok: false, error: 'Codigo no encontrado' };",
-    "  if (check.voted)  return { ok: false, error: 'Ya voto' };",
-    '  const now = new Date().toISOString();',
-    '  // 1. Registrar en hoja Votos',
-    '  getSheet(SHEET_VOTES).appendRow([now, data.code, data.party, check.name]);',
-    '  // 2. Marcar estudiante',
-    '  const studSheet = getSheet(SHEET_STUDENTS);',
-    '  studSheet.getRange(check.row, 3).setValue(true);',
-    '  studSheet.getRange(check.row, 4).setValue(now);',
-    '  // 3. Incrementar contador partido',
-    '  const partSheet = getSheet(SHEET_PARTIES);',
-    '  const partData  = partSheet.getDataRange().getValues();',
-    '  for (let i = 1; i < partData.length; i++) {',
-    '    if (partData[i][0] === data.party) {',
-    '      partSheet.getRange(i+1, 6).setValue((parseInt(partData[i][5]) || 0) + 1);',
-    '      break;',
-    '    }',
-    '  }',
-    '  // 4. Guardar timestamp de ultima actualizacion',
-    '  setLastUpdate(now);',
-    '  return { ok: true, timestamp: now };',
-    '}',
-    '',
-    'function updateStudents(students) {',
-    '  const sheet = getSheet(SHEET_STUDENTS);',
-    '  sheet.clearContents();',
-    "  sheet.appendRow(['Nombre', 'Codigo', 'Voto', 'Timestamp Voto']);",
-    "  students.forEach(s => sheet.appendRow([s.name, s.code, s.voted || false, s.voteTime || '']));",
-    '  const now = new Date().toISOString();',
-    '  setLastUpdate(now);',
-    '  return { ok: true, timestamp: now };',
-    '}',
-    '',
-    'function updateParties(parties) {',
-    '  const sheet = getSheet(SHEET_PARTIES);',
-    '  sheet.clearContents();',
-    "  sheet.appendRow(['Nombre', 'Candidato', 'Slogan', 'Color', 'Emoji', 'Votos']);",
-    '  parties.forEach(p => sheet.appendRow([p.name, p.candidate, p.slogan, p.color, p.emoji, p.votes || 0]));',
-    '  const now = new Date().toISOString();',
-    '  setLastUpdate(now);',
-    '  return { ok: true, timestamp: now };',
-    '}',
-    '',
-    'function getResults() {',
-    '  // Partidos',
-    '  const partData = getSheet(SHEET_PARTIES).getDataRange().getValues();',
-    '  const parties  = [];',
-    '  for (let i = 1; i < partData.length; i++) {',
-    '    if (partData[i][0]) parties.push({',
-    '      name: partData[i][0], candidate: partData[i][1], slogan: partData[i][2],',
-    '      color: partData[i][3], emoji: partData[i][4], votes: parseInt(partData[i][5]) || 0',
-    '    });',
-    '  }',
-    '  // Estudiantes',
-    '  const studData = getSheet(SHEET_STUDENTS).getDataRange().getValues();',
-    '  const students = [];',
-    '  for (let i = 1; i < studData.length; i++) {',
-    '    if (studData[i][0]) students.push({',
-    '      name: studData[i][0], code: studData[i][1],',
-    "      voted: studData[i][2] === true || studData[i][2] === 'TRUE',",
-    '      voteTime: studData[i][3] ? studData[i][3].toString() : null',
-    '    });',
-    '  }',
-    '  // Ultimo voto real (ultima fila de Votos)',
-    '  const votesSheet = getSheet(SHEET_VOTES);',
-    '  const lastRow    = votesSheet.getLastRow();',
-    '  let lastVoteTime = null;',
-    '  if (lastRow > 1) {',
-    '    const v = votesSheet.getRange(lastRow, 1).getValue();',
-    '    if (v) lastVoteTime = v.toString();',
-    '  }',
-    '  // Fecha de ultima actualizacion guardada en Config',
-    '  const lastUpdate = getLastUpdate();',
-    '  return { parties, students, lastUpdate: lastUpdate || lastVoteTime, lastVoteTime };',
-    '}',
-  ];
-  const code = lines.join('\n');
-  const blob = new Blob([code], { type: 'text/javascript' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'votaciones-apps-script.js';
-  link.click();
-}
+// Apps Script reemplazado por Firebase ✓
 
 // ═══════════════════════════════════════
 // UTILIDADES
@@ -2085,9 +2117,29 @@ function showToast(msg) {
 
 // Cargar URL guardada al iniciar
 window.onload = () => {
-  if (APP.sheetUrl) document.getElementById('sheets-url-input').value = APP.sheetUrl;
+  // Actualizar header
   const headerSub = document.querySelector('.header h1 span');
   if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
+
+  // Auto-cargar config de Firebase si estaba guardada
+  const saved = localStorage.getItem('fbConfig');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      // Cargar campos en el formulario
+      if (cfg.apiKey)      document.getElementById('fb-apikey').value    = cfg.apiKey;
+      if (cfg.databaseURL) document.getElementById('fb-dburl').value     = cfg.databaseURL;
+      if (cfg.projectId)   document.getElementById('fb-projectid').value = cfg.projectId;
+      if (cfg.appId)       document.getElementById('fb-appid').value     = cfg.appId;
+      // Reconectar automáticamente
+      setFbStatus('connecting');
+      window.FB.initFirebase(cfg);
+      setTimeout(() => {
+        if (APP.firebaseReady) setFbStatus('ok');
+        else setFbStatus('error');
+      }, 2500);
+    } catch(e) { localStorage.removeItem('fbConfig'); }
+  }
 };
 </script>
 </body>
