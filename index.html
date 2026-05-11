@@ -1293,8 +1293,38 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
             <div class="stat-card"><div class="stat-n" id="stat-last-vote" style="font-size:1rem;">—</div><div class="stat-l">Último voto</div></div>
           </div>
           <div class="panel-card">
-            <h3>📊 Resultados en tiempo real</h3>
-            <div id="results-bars"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+              <h3 style="margin-bottom:0;padding-bottom:0;border-bottom:none;">📊 Resultados en tiempo real</h3>
+              <button onclick="generatePDF()" style="
+                display:flex;align-items:center;gap:0.4rem;
+                background:var(--cr-rojo);color:white;border:none;
+                padding:0.5rem 1.1rem;border-radius:8px;
+                font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:500;
+                cursor:pointer;transition:all 0.2s;"
+                onmouseover="this.style.background='#a80d1f';"
+                onmouseout="this.style.background='var(--cr-rojo)';">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/>
+                  <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                Exportar informe PDF
+              </button>
+            </div>
+
+            <!-- Gráfico circular + barras lado a lado -->
+            <div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:center;margin-bottom:1.5rem;" id="chart-and-bars">
+              <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+                <canvas id="pie-chart" width="200" height="200"></canvas>
+                <div id="pie-legend" style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.3rem;width:100%;"></div>
+              </div>
+              <div id="results-bars"></div>
+            </div>
+
+            <div id="no-votes-msg" style="display:none;text-align:center;padding:2rem;">
+              <div style="font-size:2.5rem;margin-bottom:0.5rem;">📊</div>
+              <div style="color:var(--text-muted);font-size:0.9rem;">Aún no hay votos registrados</div>
+            </div>
           </div>
         </div>
 
@@ -1354,17 +1384,30 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
           <div class="panel-card">
             <h3>📋 Cargar lista de estudiantes</h3>
             <div class="form-group">
-              <textarea class="textarea-upload" id="students-bulk-input" ></textarea>
-              <div class="upload-hint">Formato: <code>NOMBRE,CODIGO,SECCIÓN</code> — Una por línea. </div>
+              <label>Pegar lista (una por línea: Nombre,Código, SECCION)</label>
+              <textarea class="textarea-upload" id="students-bulk-input" placeholder=""></textarea>
+              <div class="upload-hint">Formato: <code>NOMBRE,CODIGO,SECCION</code> — Una por línea. El código y la sección son opcionales.</div>
             </div>
             <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
               <button class="btn-primary" onclick="bulkAddStudents()">Cargar estudiantes</button>
+              <button class="btn-sm" onclick="exportStudentCodes()">⬇ Exportar códigos</button>
             </div>
           </div>
           <div class="panel-card">
-            <h3>👥 Lista de estudiantes (<span id="students-count">0</span>)</h3>
-            <div style="margin-bottom:0.75rem;">
-              <input type="text" id="student-search" placeholder="Buscar estudiante..." style="width:250px;" oninput="renderStudentsTable()">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+              <h3 style="margin-bottom:0;padding-bottom:0;border-bottom:none;">👥 Lista de estudiantes (<span id="students-count">0</span>)</h3>
+              <div style="position:relative;display:flex;align-items:center;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;color:var(--text-muted);pointer-events:none;">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="student-search" placeholder="Buscar por nombre, código o sección..."
+                  style="padding:0.5rem 0.9rem 0.5rem 2.1rem;border:1.5px solid var(--border);border-radius:8px;
+                    font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:280px;
+                    transition:border-color 0.2s;background:var(--surface);"
+                  onfocus="this.style.borderColor='var(--cr-azul)';this.style.background='white';"
+                  onblur="this.style.borderColor='var(--border)';this.style.background='var(--surface)';"
+                  oninput="renderStudentsTable()">
+              </div>
             </div>
             <div style="overflow-x:auto;">
               <table class="students-table">
@@ -1390,7 +1433,7 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
             </div>
             <div class="form-group">
               <label>Año lectivo</label>
-              <input type="text" id="s-year" value="2026">
+              <input type="text" id="s-year" value="2025">
             </div>
             <div class="form-group">
               <label>Nueva contraseña admin</label>
@@ -1774,7 +1817,8 @@ function _enterBallot() {
   APP.selectedPartyIdx = -1;
   document.getElementById('voter-login').style.display = 'none';
   document.getElementById('voter-ballot').style.display = 'block';
-  document.getElementById('voter-welcome-tag').textContent = `Hola, ${APP.currentVoter.name || 'Estudiante'}`;
+  const sec = APP.currentVoter.section ? ` · Sección ${APP.currentVoter.section}` : '';
+  document.getElementById('voter-welcome-tag').textContent = `Hola, ${APP.currentVoter.name || 'Estudiante'}${sec}`;
   renderBallot();
 }
 
@@ -1965,6 +2009,89 @@ function formatSyncTime(iso) {
   } catch { return iso; }
 }
 
+// ── Gráfico circular con Canvas nativo ──────────────────
+let _pieChart = null;
+
+function drawPieChart(parties, total) {
+  const canvas = document.getElementById('pie-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 8;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (total === 0) {
+    // Círculo vacío
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#E5E7EB';
+    ctx.fill();
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = 'bold 13px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sin votos', cx, cy + 5);
+    return;
+  }
+
+  let startAngle = -Math.PI / 2;
+  parties.forEach((p, i) => {
+    const votes = p.votes || 0;
+    const slice = (votes / total) * Math.PI * 2;
+    // Sector
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+    ctx.closePath();
+    ctx.fillStyle = p.color || '#6B7280';
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // Porcentaje dentro del sector si es > 8%
+    const pct = Math.round((votes / total) * 100);
+    if (pct > 8) {
+      const midA = startAngle + slice / 2;
+      const tx = cx + Math.cos(midA) * (r * 0.62);
+      const ty = cy + Math.sin(midA) * (r * 0.62);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 13px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pct + '%', tx, ty);
+    }
+    startAngle += slice;
+  });
+
+  // Círculo central (donut)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+  // Total en el centro
+  ctx.fillStyle = '#1A1A2E';
+  ctx.font = 'bold 20px DM Sans, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(total, cx, cy - 7);
+  ctx.font = '11px DM Sans, sans-serif';
+  ctx.fillStyle = '#6B7280';
+  ctx.fillText('votos', cx, cy + 10);
+
+  // Leyenda
+  const legend = document.getElementById('pie-legend');
+  if (legend) {
+    legend.innerHTML = parties.map(p => {
+      const pct = total > 0 ? Math.round((p.votes || 0) / total * 100) : 0;
+      return `<div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;">
+        <span style="width:10px;height:10px;border-radius:2px;background:${p.color};flex-shrink:0;"></span>
+        <span style="color:var(--text-muted);flex:1;">${p.name}</span>
+        <span style="font-weight:600;color:var(--text);">${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+}
+
 // Actualizar UI de resultados desde APP (local, sin red)
 function refreshResultsLocal() {
   const parties  = APP.parties;
@@ -1979,20 +2106,31 @@ function refreshResultsLocal() {
   if (elPct)   elPct.textContent   = students.length > 0
     ? Math.round((total / students.length) * 100) + '%' : '0%';
 
-  const barsEl = document.getElementById('results-bars');
+  // Gráfico circular
+  drawPieChart(parties, total);
+
+  const barsEl   = document.getElementById('results-bars');
+  const noVotes  = document.getElementById('no-votes-msg');
+  const chartRow = document.getElementById('chart-and-bars');
   if (!barsEl) return;
+
   if (total === 0) {
-    barsEl.innerHTML = '<div class="empty-state"><div class="big">📊</div>Aún no hay votos registrados</div>';
+    barsEl.innerHTML = '';
+    if (noVotes)  noVotes.style.display  = 'block';
+    if (chartRow) chartRow.style.display = 'none';
     return;
   }
+  if (noVotes)  noVotes.style.display  = 'none';
+  if (chartRow) chartRow.style.display = 'grid';
+
   barsEl.innerHTML = parties.map(p => {
     const pct = total > 0 ? Math.round((p.votes || 0) / total * 100) : 0;
     return `
       <div class="result-row">
         <div class="result-row-top">
           <span class="result-party-name">
-            <span style="width:14px;height:14px;border-radius:50%;background:${p.color};display:inline-block;"></span>
-            ${p.emoji || '🏛️'} ${p.name} — <em style="font-weight:300">${p.candidate}</em>
+            <span style="width:12px;height:12px;border-radius:3px;background:${p.color};display:inline-block;"></span>
+            ${p.emoji || '🏛️'} <strong>${p.name}</strong> — <em style="font-weight:300">${p.candidate}</em>
           </span>
           <span class="result-pct">${p.votes || 0} votos · ${pct}%</span>
         </div>
@@ -2202,7 +2340,7 @@ function bulkAddStudents() {
 function renderStudentsTable() {
   const search = (document.getElementById('student-search')?.value || '').toLowerCase();
   const filtered = APP.students.filter(s =>
-    s.name.toLowerCase().includes(search) || s.code.toLowerCase().includes(search)
+    s.name.toLowerCase().includes(search) || s.code.toLowerCase().includes(search) || (s.section||'').toLowerCase().includes(search)
   );
   document.getElementById('students-count').textContent = APP.students.length;
   const tbody = document.getElementById('students-tbody');
@@ -2231,16 +2369,16 @@ function renderStudentsTable() {
     }
     return `
     <tr>
-      <td style="color:var(--text-muted)">${i+1}</td>
-      <td>${s.name}</td>
+      <td style="color:var(--text-muted);font-size:0.8rem;">${i+1}</td>
+      <td style="font-weight:500;">${s.name}</td>
       <td><span class="code-badge">${s.code}</span></td>
       <td style="font-size:0.82rem;color:var(--text-muted);">${s.section || '—'}</td>
+      <td style="font-size:0.8rem;color:var(--text-muted);">${voteTimeStr}</td>
       <td>
         <span class="voted-badge ${s.voted ? 'yes' : 'no'}">
-          ${s.voted ? '✓ Votó' : '○ Pendiente'}
+          ${s.voted ? '✓ Sí' : '○ No'}
         </span>
       </td>
-      <td style="font-size:0.8rem;color:var(--text-muted);">${voteTimeStr}</td>
       <td>
         <button class="btn-sm del" onclick="deleteStudent('${s.code}')">✕</button>
       </td>
@@ -2379,6 +2517,121 @@ async function nukeSystem() {
 // APPS SCRIPT — CÓDIGO PARA DESCARGAR
 // ═══════════════════════════════════════
 // Apps Script reemplazado por Firebase ✓
+
+// ═══════════════════════════════════════
+// GENERADOR DE PDF
+// ═══════════════════════════════════════
+async function generatePDF() {
+  const parties  = APP.parties;
+  const students = APP.students;
+  const total    = parties.reduce((s, p) => s + (p.votes || 0), 0);
+  const now      = new Date().toLocaleString('es-CR', { dateStyle: 'full', timeStyle: 'short' });
+  const voted    = students.filter(s => s.voted);
+
+  // Capturar el canvas del gráfico como imagen
+  const canvas   = document.getElementById('pie-chart');
+  const chartImg = canvas ? canvas.toDataURL('image/png') : null;
+
+  // Construir el HTML del PDF en una ventana nueva
+  const rows = students.map((s, i) => {
+    let vt = '—';
+    if (s.voteTime) {
+      try { vt = new Date(s.voteTime).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'medium' }); }
+      catch(e) { vt = s.voteTime; }
+    }
+    return `<tr class="${i % 2 === 0 ? 'even' : ''}">
+      <td>${i+1}</td>
+      <td>${s.name || '—'}</td>
+      <td><code>${s.code}</code></td>
+      <td>${s.section || '—'}</td>
+      <td>${vt}</td>
+      <td class="${s.voted ? 'voted-yes' : 'voted-no'}">${s.voted ? '✓ Sí' : '○ No'}</td>
+    </tr>`;
+  }).join('');
+
+  const partyRows = parties.map(p => {
+    const pct = total > 0 ? ((p.votes || 0) / total * 100).toFixed(1) : '0.0';
+    return `<tr>
+      <td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${p.color};margin-right:6px;vertical-align:middle;"></span>${p.name}</td>
+      <td>${p.candidate}${p.vicecandidate ? ' / ' + p.vicecandidate : ''}</td>
+      <td style="text-align:center;font-weight:700;">${p.votes || 0}</td>
+      <td style="text-align:center;">${pct}%</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe de Votaciones — ${APP.schoolName}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }
+  .header { display:flex; align-items:center; gap:16px; border-bottom: 3px solid #1A3A8F; padding-bottom: 14px; margin-bottom: 20px; }
+  .header-text h1 { font-size: 18px; color: #1A3A8F; font-weight: 700; }
+  .header-text p  { font-size: 10px; color: #6B7280; margin-top:3px; }
+  .stripe { height:4px; background:linear-gradient(90deg,#C8181E 33%,#F5C400 33% 66%,#1A3A8F 66%); margin-bottom:20px; }
+  .section-title { font-size:13px; font-weight:700; color:#1A3A8F; margin:20px 0 10px; padding-bottom:4px; border-bottom:1.5px solid #E5E7EB; }
+  .summary { display:flex; gap:16px; margin-bottom:20px; }
+  .summary-card { flex:1; border:1.5px solid #E5E7EB; border-radius:8px; padding:10px 14px; text-align:center; }
+  .summary-card .n { font-size:22px; font-weight:700; color:#1A3A8F; }
+  .summary-card .l { font-size:9px; color:#6B7280; text-transform:uppercase; letter-spacing:0.05em; margin-top:2px; }
+  .chart-row { display:flex; align-items:flex-start; gap:24px; margin-bottom:20px; }
+  .chart-row img { width:200px; height:200px; }
+  table { width:100%; border-collapse:collapse; font-size:10px; }
+  th { background:#1A3A8F; color:white; padding:6px 8px; text-align:left; font-weight:600; }
+  td { padding:5px 8px; border-bottom:1px solid #F0F0F0; }
+  tr.even td { background:#F8F9FF; }
+  .voted-yes { color:#1B7A4A; font-weight:600; }
+  .voted-no  { color:#9CA3AF; }
+  code { background:#F0F0F0; padding:1px 4px; border-radius:3px; font-size:10px; }
+  .footer { margin-top:24px; text-align:center; font-size:9px; color:#9CA3AF; border-top:1px solid #E5E7EB; padding-top:10px; }
+  .party-table th { background:#374151; }
+  @media print { body { padding:10px; } }
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+<div class="header">
+  <div class="header-text">
+    <h1>Informe de Votaciones Estudiantiles</h1>
+    <p>${APP.schoolName} — Año lectivo ${APP.schoolYear || new Date().getFullYear()} &nbsp;|&nbsp; Generado: ${now}</p>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="summary-card"><div class="n">${students.length}</div><div class="l">Estudiantes</div></div>
+  <div class="summary-card"><div class="n">${total}</div><div class="l">Votos emitidos</div></div>
+  <div class="summary-card"><div class="n">${students.length > 0 ? Math.round(total/students.length*100) : 0}%</div><div class="l">Participación</div></div>
+  <div class="summary-card"><div class="n">${students.length - voted.length}</div><div class="l">Sin votar</div></div>
+</div>
+
+<div class="section-title">Resultados por partido</div>
+<div class="chart-row">
+  ${chartImg ? `<img src="${chartImg}" alt="Gráfico">` : ''}
+  <div style="flex:1;">
+    <table class="party-table">
+      <thead><tr><th>Partido</th><th>Candidato/a</th><th style="text-align:center">Votos</th><th style="text-align:center">%</th></tr></thead>
+      <tbody>${partyRows}</tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section-title">Lista de votantes (${students.length} estudiantes)</div>
+<table>
+  <thead><tr><th>#</th><th>Nombre</th><th>Código</th><th>Sección</th><th>Fecha y hora del voto</th><th>Votó</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="footer">${APP.schoolName} — Sistema de Votaciones Estudiantiles &nbsp;|&nbsp; ${now}</div>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(html);
+  win.document.close();
+  // Dar tiempo a que cargue el DOM y luego imprimir
+  setTimeout(() => { win.focus(); win.print(); }, 600);
+}
 
 // ═══════════════════════════════════════
 // UTILIDADES
