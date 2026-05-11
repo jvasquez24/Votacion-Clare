@@ -76,18 +76,28 @@ function _onFirebaseReady() {
 
   // Partidos — reemplaza COMPLETO el array, nunca hace push
   onValue(ref(db, 'parties'), snap => {
-    if (_writing) return;                    // ignorar si estamos escribiendo nosotros
+    if (_writing) return;
     const data = snap.val();
     if (!data) { APP.parties = []; }
     else {
-      // Reconstruir desde Firebase como fuente de verdad
       APP.parties = Object.entries(data)
         .sort(([,a],[,b]) => (a._order || 0) - (b._order || 0))
-        .map(([id, p]) => ({ ...p, _fbId: id }));
+        .map(([id, p]) => ({
+          ...p,
+          _fbId: id,
+          // Si la imagen quedó como placeholder, limpiarla
+          image: (p.image === '__has_image__' ? null : p.image) || null,
+        }));
     }
     save();
-    if (document.getElementById('tab-parties')?.classList.contains('active')) renderPartiesAdmin();
-    if (document.getElementById('results-bars')) refreshResultsLocal();
+    if (typeof renderPartiesAdmin === 'function' &&
+        document.getElementById('tab-parties')?.classList.contains('active')) {
+      renderPartiesAdmin();
+    }
+    if (typeof refreshResultsLocal === 'function' &&
+        document.getElementById('results-bars')) {
+      refreshResultsLocal();
+    }
   });
 
   // Estudiantes — reemplaza COMPLETO el array
@@ -117,15 +127,35 @@ async function fbSaveParty(party, fbId) {
   if (!db) return false;
   try {
     _writing = true;
+    // Si la imagen es base64 muy grande (>500KB) la guardamos aparte
+    // para no bloquear el guardado del resto de datos
+    const partyData = { ...party };
+    const imgData   = partyData.image || null;
+
+    // Guardar datos sin imagen primero (rápido)
+    partyData.image = imgData ? '__has_image__' : null;
+
+    let targetRef;
     if (fbId) {
-      await update(ref(db, 'parties/' + fbId), party);
+      targetRef = ref(db, 'parties/' + fbId);
+      await update(targetRef, partyData);
     } else {
-      const newRef = push(ref(db, 'parties'));
-      await set(newRef, { ...party, _order: Date.now() });
+      targetRef = push(ref(db, 'parties'));
+      await set(targetRef, { ...partyData, _order: Date.now() });
+      fbId = targetRef.key;
+    }
+
+    // Luego guardar la imagen (puede tardar más si es grande)
+    if (imgData) {
+      await update(ref(db, 'parties/' + fbId), { image: imgData });
     }
     return true;
-  } catch(e) { console.error('fbSaveParty:', e); return false; }
-  finally { setTimeout(() => { _writing = false; }, 800); }
+  } catch(e) {
+    console.error('fbSaveParty error:', e);
+    return false;
+  } finally {
+    setTimeout(() => { _writing = false; }, 1000);
+  }
 }
 
 async function fbDeleteParty(fbId) {
@@ -2288,7 +2318,7 @@ function editParty(i) {
   openPartyForm(true);
 }
 
-function saveParty() {
+async function saveParty() {
   const idx = parseInt(document.getElementById('edit-party-idx').value);
   const party = {
     name:          document.getElementById('pf-name').value.trim(),
@@ -2298,29 +2328,51 @@ function saveParty() {
     description:   document.getElementById('pf-description').value.trim(),
     color:         document.getElementById('pf-color').value,
     emoji:         document.getElementById('pf-emoji').value.trim() || '🏛️',
-    image:         _currentPartyImg || (idx >= 0 ? APP.parties[idx].image : null),
-    votes:         idx >= 0 ? APP.parties[idx].votes : 0,
+    image:         _currentPartyImg || (idx >= 0 ? (APP.parties[idx].image || null) : null),
+    votes:         idx >= 0 ? (APP.parties[idx].votes || 0) : 0,
   };
   if (!party.name || !party.candidate) { showToast('⚠️ Completá nombre y candidato/a'); return; }
+
+  // Preparar objeto para Firebase (sin _fbId)
+  const partyForFb = { ...party };
+  delete partyForFb._fbId;
+
   if (idx >= 0) {
+    // ── EDITAR existente ──────────────────────────────────
     const fbId = APP.parties[idx]._fbId;
-    APP.parties[idx] = { ...party, _fbId: fbId };
-    if (APP.firebaseReady && window.FB) {
-      const p2 = { ...party }; delete p2._fbId;
-      window.FB.fbSaveParty(p2, fbId).then(() => showToast('Partido guardado ✓ (Firebase)'));
+    APP.parties[idx] = { ...party, _fbId: fbId };   // actualizar local de inmediato
+    save();
+    cancelPartyForm();
+    renderPartiesAdmin();
+    if (APP.firebaseReady && window.FB && fbId) {
+      const ok = await window.FB.fbSaveParty(partyForFb, fbId);
+      showToast(ok ? '✓ Partido actualizado en Firebase' : '⚠️ Error al guardar en Firebase');
+    } else {
+      showToast('✓ Partido actualizado');
     }
   } else {
+    // ── NUEVO partido ─────────────────────────────────────
     if (APP.firebaseReady && window.FB) {
-      const p2 = { ...party }; delete p2._fbId;
-      window.FB.fbSaveParty(p2, null).then(() => showToast('Partido guardado ✓ (Firebase)'));
+      // Guardar en Firebase; onValue actualizará APP.parties automáticamente
+      const ok = await window.FB.fbSaveParty(partyForFb, null);
+      if (ok) {
+        showToast('✓ Partido guardado en Firebase');
+      } else {
+        // Si Firebase falla, guardar localmente como respaldo
+        APP.parties.push(party);
+        save();
+        renderPartiesAdmin();
+        showToast('⚠️ Firebase falló — guardado localmente');
+      }
     } else {
+      // Sin Firebase: guardar solo local
       APP.parties.push(party);
+      save();
+      renderPartiesAdmin();
+      showToast('✓ Partido guardado');
     }
+    cancelPartyForm();
   }
-  save();
-  cancelPartyForm();
-  renderPartiesAdmin();
-  if (!APP.firebaseReady) showToast('Partido guardado ✓');
 }
 
 function cancelPartyForm() {
@@ -2331,10 +2383,21 @@ function cancelPartyForm() {
 
 
 function deleteParty(i) {
-  if (!confirm(`¿Eliminar "${APP.parties[i].name}"? Se perderán sus votos.`)) return;
+  const p = APP.parties[i];
+  if (!confirm(`¿Eliminar "${p.name}"? Se perderán sus votos.`)) return;
+  const fbId = p._fbId;
+  // Quitar localmente de inmediato
   APP.parties.splice(i, 1);
   save();
   renderPartiesAdmin();
+  refreshResultsLocal();
+  // Borrar de Firebase
+  if (APP.firebaseReady && window.FB && fbId) {
+    window.FB.fbDeleteParty(fbId)
+      .then(ok => showToast(ok ? '🗑️ Partido eliminado de Firebase' : '⚠️ Error al eliminar de Firebase'));
+  } else {
+    showToast('🗑️ Partido eliminado');
+  }
 }
 
 // ═══════════════════════════════════════
