@@ -1110,7 +1110,7 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
         <h2>Ingresá tu código</h2>
         <p>Usá el código único que te entregaron para emitir tu voto. Solo podés votar una vez.</p>
         <div class="code-input">
-          <input type="text" id="voter-code-input" placeholder="Ej: EST-2025-001" maxlength="20" onkeypress="if(event.key==='Enter') loginVoter()" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+          <input type="text" id="voter-code-input" placeholder="CODIGO ESTUDIANTE" maxlength="20" onkeypress="if(event.key==='Enter') loginVoter()" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
           <button class="btn-primary" onclick="loginVoter()">Entrar</button>
         </div>
         <div id="login-msg"></div>
@@ -1194,7 +1194,6 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
         </div>
         <button class="btn-primary btn-full" onclick="loginAdmin()">Ingresar</button>
         <div id="admin-login-msg"></div>
-        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:1rem;">Contraseña por defecto: <code>admin123</code> (cambiala luego)</p>
       </div>
     </div>
 
@@ -1355,14 +1354,11 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
           <div class="panel-card">
             <h3>📋 Cargar lista de estudiantes</h3>
             <div class="form-group">
-              <label>Pegar lista (una por línea: Nombre,Código)</label>
-              <textarea class="textarea-upload" id="students-bulk-input" placeholder="Juan Pérez,EST-001,7A&#10;Ana López,EST-002,7B&#10;Carlos Mora,EST-003,8A"></textarea>
-              <div class="upload-hint">Formato: <code>Nombre,CODIGO,Sección</code> — Una por línea. El código y la sección son opcionales.</div>
+              <textarea class="textarea-upload" id="students-bulk-input" ></textarea>
+              <div class="upload-hint">Formato: <code>NOMBRE,CODIGO,SECCIÓN</code> — Una por línea. </div>
             </div>
             <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
               <button class="btn-primary" onclick="bulkAddStudents()">Cargar estudiantes</button>
-              <button class="btn-sm" onclick="generateCodesExample()">Ver ejemplo</button>
-              <button class="btn-sm" onclick="exportStudentCodes()">⬇ Exportar códigos</button>
             </div>
           </div>
           <div class="panel-card">
@@ -1375,7 +1371,7 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
                 <thead>
                   <tr>
                     <th>#</th><th>Nombre</th><th>Código único</th>
-                    <th>Estado</th><th>Fecha y hora del voto</th><th></th>
+                    <th>Sección</th><th>Estado</th><th>Fecha y hora del voto</th>
                   </tr>
                 </thead>
                 <tbody id="students-tbody"></tbody>
@@ -1394,7 +1390,7 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
             </div>
             <div class="form-group">
               <label>Año lectivo</label>
-              <input type="text" id="s-year" value="2025">
+              <input type="text" id="s-year" value="2026">
             </div>
             <div class="form-group">
               <label>Nueva contraseña admin</label>
