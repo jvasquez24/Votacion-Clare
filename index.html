@@ -208,6 +208,53 @@ async function fbCheckCode(code) {
 // Exponer funciones al scope global
 window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
               fbRegisterVote, fbSaveConfig, fbCheckCode };
+
+// ── AUTO-CONEXIÓN dentro del módulo (único scope con acceso a FIREBASE_CONFIG) ──
+// Se ejecuta cuando el DOM y todos los scripts están listos
+function _autoConnect() {
+  if (typeof APP === 'undefined' || !window.FB) {
+    // APP todavía no cargó, esperar un tick
+    setTimeout(_autoConnect, 100);
+    return;
+  }
+  if (APP.firebaseReady) return; // ya conectado
+
+  if (typeof setFbStatus === 'function') setFbStatus('connecting');
+
+  try {
+    const ok = initFirebase(FIREBASE_CONFIG);
+    if (ok) {
+      // Esperar que los listeners carguen datos
+      setTimeout(() => {
+        if (APP.firebaseReady) {
+          if (typeof setFbStatus === 'function')   setFbStatus('ok');
+          if (typeof updateSyncBar === 'function') updateSyncBar('ok', '✓ Firebase conectado', new Date().toLocaleString('es-CR'));
+          if (typeof showToast === 'function')     showToast('🔥 Firebase conectado');
+        } else {
+          if (typeof setFbStatus === 'function') setFbStatus('error');
+        }
+      }, 2500);
+    } else {
+      if (typeof setFbStatus === 'function') setFbStatus('error');
+    }
+  } catch(e) {
+    console.error('Auto-connect error:', e);
+    if (typeof setFbStatus === 'function') setFbStatus('error');
+  }
+}
+
+// Escuchar evento de reconexión manual
+document.addEventListener('fb-reconnect', () => {
+  APP.firebaseReady = false;
+  _autoConnect();
+});
+
+// Iniciar cuando el documento esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(_autoConnect, 200));
+} else {
+  setTimeout(_autoConnect, 200);
+}
 </script>
 <style>
   :root {
@@ -1520,6 +1567,9 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
           <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">
             Las credenciales están configuradas internamente. La conexión se establece automáticamente al cargar el sistema.
           </p>
+          <button class="btn-primary" onclick="connectFirebase()" style="margin-bottom:1.25rem;">
+            🔄 Reconectar Firebase
+          </button>
           <div class="danger-zone">
             <h4>⚠️ Limpiar datos en Firebase</h4>
             <p>Borra votos y/o estudiantes de la base de datos. No afecta partidos ni configuración.</p>
@@ -1615,46 +1665,21 @@ function save() {
 // ═══════════════════════════════════════
 // FIREBASE — CONEXIÓN Y HELPERS
 // ═══════════════════════════════════════
-const FB_CONFIG_KEY = 'fbConfig';
 
+// Botón único de reconexión manual (por si falla la auto-conexión)
 function connectFirebase() {
-  const apiKey    = document.getElementById('fb-apikey').value.trim();
-  const databaseURL = document.getElementById('fb-dburl').value.trim();
-  const projectId = document.getElementById('fb-projectid').value.trim();
-  const appId     = document.getElementById('fb-appid').value.trim();
-
-  if (!apiKey || !databaseURL || !projectId || !appId) {
-    showToast('⚠️ Completá todos los campos de Firebase'); return;
+  if (APP.firebaseReady) {
+    showToast('✓ Firebase ya está conectado');
+    return;
   }
-
-  const config = { apiKey, databaseURL, projectId, appId,
-    authDomain: projectId + '.firebaseapp.com',
-    storageBucket: projectId + '.appspot.com',
-    messagingSenderId: '' };
-
-  localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(config));
-
-  const ok = window.FB.initFirebase(config);
-  if (ok) {
-    setFbStatus('connecting');
-    setTimeout(() => {
-      if (APP.firebaseReady) {
-        setFbStatus('ok');
-        showToast('🔥 Firebase conectado correctamente');
-        // Subir datos locales si hay partidos y estudiantes
-        _pushLocalDataToFirebase();
-      }
-    }, 2000);
+  setFbStatus('connecting');
+  showToast('🔄 Conectando a Firebase...');
+  // Delegar al módulo que tiene acceso a FIREBASE_CONFIG
+  if (window.FB && window.FB.initFirebase) {
+    // El módulo ya tiene las credenciales, solo necesitamos llamar _autoConnect
+    // que está expuesto vía evento personalizado
+    document.dispatchEvent(new CustomEvent('fb-reconnect'));
   }
-}
-
-function disconnectFirebase() {
-  if (!confirm('¿Desconectar Firebase? Las credenciales se borrarán del navegador.')) return;
-  localStorage.removeItem(FB_CONFIG_KEY);
-  ['fb-apikey','fb-dburl','fb-projectid','fb-appid'].forEach(id => document.getElementById(id).value = '');
-  APP.firebaseReady = false;
-  setFbStatus('off');
-  showToast('Firebase desconectado');
 }
 
 async function fbClearVotesAndReset() {
@@ -2662,37 +2687,10 @@ function showToast(msg) {
 
 // Cargar URL guardada al iniciar
 window.onload = () => {
-  // Actualizar header
+  // Actualizar header con datos guardados localmente
   const headerSub = document.querySelector('.header h1 span');
   if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
-
-  // ── Conectar automáticamente con credenciales fijas ──
-  setFbStatus('connecting');
-  // Rellenar campos del formulario (solo visual)
-  const fields = {
-    'fb-apikey':    FIREBASE_CONFIG.apiKey,
-    'fb-dburl':     FIREBASE_CONFIG.databaseURL,
-    'fb-projectid': FIREBASE_CONFIG.projectId,
-    'fb-appid':     FIREBASE_CONFIG.appId,
-  };
-  Object.entries(fields).forEach(([id, val]) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val;
-  });
-
-  const ok = window.FB.initFirebase(FIREBASE_CONFIG);
-  if (ok) {
-    setTimeout(() => {
-      if (APP.firebaseReady) {
-        setFbStatus('ok');
-        updateSyncBar('ok', '✓ Firebase conectado', new Date().toLocaleString('es-CR'));
-      } else {
-        setFbStatus('error');
-      }
-    }, 2000);
-  } else {
-    setFbStatus('error');
-  }
+  // La conexión a Firebase se inicia automáticamente desde el módulo (_autoConnect)
 };
 </script>
 </body>
