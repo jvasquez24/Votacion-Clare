@@ -7,21 +7,35 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- Firebase SDK -->
 <script type="module">
-import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp }                               from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, set, get, update,
-         onValue, push, runTransaction, child }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+         onValue, push, runTransaction }               from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 // ═══════════════════════════════════════════════════════════
-// FIREBASE — inicialización
+// CREDENCIALES FIJAS — Colegio Claretiano
+// ═══════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:      'AIzaSyAOFxgjWO7OTEbq-PFGcYb4Yj0R9hc2HTM',
+  authDomain:  'sistemavotacionclaretiano.firebaseapp.com',
+  databaseURL: 'https://sistemavotacionclaretiano-default-rtdb.firebaseio.com/',
+  projectId:   'sistemavotacionclaretiano',
+  storageBucket:'sistemavotacionclaretiano.appspot.com',
+  messagingSenderId: '699361695887',
+  appId:       '1:699361695887:web:e1d0644d7db8dfe018b8fa',
+};
+
+// ═══════════════════════════════════════════════════════════
+// FIREBASE — estado
 // ═══════════════════════════════════════════════════════════
 let db = null;
-let _fbListeners = [];  // para desuscribir listeners si hace falta
+// Flag para evitar que los listeners procesen mientras el sistema
+// está escribiendo en Firebase (evita el loop de duplicados)
+let _writing = false;
 
 function initFirebase(config) {
   try {
     const app = initializeApp(config);
     db = getDatabase(app);
-    console.log('Firebase conectado ✓');
     APP.firebaseReady = true;
     _onFirebaseReady();
     return true;
@@ -31,9 +45,10 @@ function initFirebase(config) {
   }
 }
 
-// Llamada cuando Firebase está listo → escuchar cambios en tiempo real
+// ── Listeners en tiempo real (SIN duplicar datos) ────────
 function _onFirebaseReady() {
-  // Escuchar config (votingOpen, schoolName, schoolYear, contraseña)
+
+  // Config (votingOpen, nombre, año, contraseña)
   onValue(ref(db, 'config'), snap => {
     const cfg = snap.val();
     if (!cfg) return;
@@ -47,47 +62,48 @@ function _onFirebaseReady() {
     if (cfg.schoolName) {
       APP.schoolName = cfg.schoolName;
       const el = document.getElementById('s-school');
-      if (el) el.value = cfg.schoolName;
+      if (el && document.activeElement !== el) el.value = cfg.schoolName;
       _updateHeaderSub();
     }
     if (cfg.schoolYear) {
       APP.schoolYear = cfg.schoolYear;
       const el = document.getElementById('s-year');
-      if (el) el.value = cfg.schoolYear;
+      if (el && document.activeElement !== el) el.value = cfg.schoolYear;
       _updateHeaderSub();
     }
-    if (cfg.adminPwdHash) {
-      // Guardar hash para verificación en login
-      APP._adminPwdHash = cfg.adminPwdHash;
-    }
+    if (cfg.adminPwdHash) APP._adminPwdHash = cfg.adminPwdHash;
   });
 
-  // Escuchar partidos en tiempo real
+  // Partidos — reemplaza COMPLETO el array, nunca hace push
   onValue(ref(db, 'parties'), snap => {
+    if (_writing) return;                    // ignorar si estamos escribiendo nosotros
     const data = snap.val();
-    if (!data) return;
-    // Convertir objeto Firebase a array manteniendo orden
-    const arr = Object.entries(data)
-      .sort(([,a],[,b]) => (a._order||0) - (b._order||0))
-      .map(([id, p]) => ({ ...p, _fbId: id }));
-    if (arr.length) {
-      APP.parties = arr;
-      save();
-      // Refrescar UI si el panel está abierto
-      if (document.getElementById('tab-parties')?.classList.contains('active')) renderPartiesAdmin();
-      if (document.getElementById('results-bars')) refreshResultsLocal();
+    if (!data) { APP.parties = []; }
+    else {
+      // Reconstruir desde Firebase como fuente de verdad
+      APP.parties = Object.entries(data)
+        .sort(([,a],[,b]) => (a._order || 0) - (b._order || 0))
+        .map(([id, p]) => ({ ...p, _fbId: id }));
     }
+    save();
+    if (document.getElementById('tab-parties')?.classList.contains('active')) renderPartiesAdmin();
+    if (document.getElementById('results-bars')) refreshResultsLocal();
   });
 
-  // Escuchar estudiantes en tiempo real
+  // Estudiantes — reemplaza COMPLETO el array
   onValue(ref(db, 'students'), snap => {
+    if (_writing) return;
     const data = snap.val();
-    if (!data) return;
-    const arr = Object.entries(data).map(([id, s]) => ({ ...s, _fbId: id }));
-    APP.students = arr;
+    if (!data) { APP.students = []; }
+    else {
+      APP.students = Object.values(data).filter(Boolean);
+    }
     save();
     if (document.getElementById('students-tbody')) renderStudentsTable();
     updateSyncBar('ok', '✓ Firebase — tiempo real', new Date().toLocaleString('es-CR'));
+    // Actualizar stats
+    const elStud = document.getElementById('stat-students');
+    if (elStud) elStud.textContent = APP.students.length;
   });
 }
 
@@ -100,6 +116,7 @@ function _updateHeaderSub() {
 async function fbSaveParty(party, fbId) {
   if (!db) return false;
   try {
+    _writing = true;
     if (fbId) {
       await update(ref(db, 'parties/' + fbId), party);
     } else {
@@ -108,6 +125,7 @@ async function fbSaveParty(party, fbId) {
     }
     return true;
   } catch(e) { console.error('fbSaveParty:', e); return false; }
+  finally { setTimeout(() => { _writing = false; }, 800); }
 }
 
 async function fbDeleteParty(fbId) {
@@ -122,28 +140,32 @@ async function fbDeleteParty(fbId) {
 async function fbBulkSaveStudents(students) {
   if (!db) return false;
   try {
-    // Limpiar y reescribir todos
+    _writing = true;
     await set(ref(db, 'students'), null);
-    const updates = {};
-    students.forEach(s => {
-      const key = s.code.toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
-      updates[key] = { name: s.name, code: s.code.toUpperCase(), section: s.section || '', voted: s.voted || false, voteTime: s.voteTime || '' };
-    });
-    await set(ref(db, 'students'), updates);
+    if (students.length > 0) {
+      const updates = {};
+      students.forEach(s => {
+        const key = s.code.toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+        updates[key] = { name: s.name, code: s.code.toUpperCase(), section: s.section || '', voted: s.voted || false, voteTime: s.voteTime || '' };
+      });
+      await set(ref(db, 'students'), updates);
+    }
     return true;
   } catch(e) { console.error('fbBulkSave:', e); return false; }
+  finally { setTimeout(() => { _writing = false; }, 800); }
 }
 
 // ── Firebase: registrar voto (transacción atómica) ───────
 async function fbRegisterVote(code, partyFbId, partyName, voterName, timestamp, section = '') {
   if (!db) return { ok: false, error: 'Sin Firebase' };
   try {
+    _writing = true;
     const studentKey = code.toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
     const studentRef = ref(db, 'students/' + studentKey);
 
-    // Verificar que no haya votado (lectura rápida)
+    // Verificar que no haya votado
     const snap = await get(studentRef);
-    const st = snap.val();
+    const st   = snap.val();
     if (st && st.voted) return { ok: false, error: 'Ya votó' };
 
     // Marcar estudiante como votó
@@ -154,16 +176,15 @@ async function fbRegisterVote(code, partyFbId, partyName, voterName, timestamp, 
       await runTransaction(ref(db, 'parties/' + partyFbId + '/votes'), current => (current || 0) + 1);
     }
 
-    // Registrar en historial de votos
-    await push(ref(db, 'votes'), {
-      code, name: voterName, section, party: partyName, timestamp
-    });
+    // Historial de votos
+    await push(ref(db, 'votes'), { code, name: voterName, section, party: partyName, timestamp });
 
-    // Actualizar lastUpdate en config
+    // Última actualización
     await update(ref(db, 'config'), { lastUpdate: timestamp });
 
     return { ok: true };
   } catch(e) { console.error('fbVote:', e); return { ok: false, error: e.message }; }
+  finally { setTimeout(() => { _writing = false; }, 800); }
 }
 
 // ── Firebase: guardar config ─────────────────────────────
@@ -1384,9 +1405,9 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
           <div class="panel-card">
             <h3>📋 Cargar lista de estudiantes</h3>
             <div class="form-group">
-              <label>Pegar lista (una por línea: Nombre,Código, SECCION)</label>
+              <label>Pegar lista (una por línea: Nombre,Código)</label>
               <textarea class="textarea-upload" id="students-bulk-input" placeholder=""></textarea>
-              <div class="upload-hint">Formato: <code>NOMBRE,CODIGO,SECCION</code> — Una por línea. El código y la sección son opcionales.</div>
+              <div class="upload-hint">Formato: <code>Nombre,CODIGO,Sección</code> — Una por línea. El código y la sección son opcionales.</div>
             </div>
             <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
               <button class="btn-primary" onclick="bulkAddStudents()">Cargar estudiantes</button>
@@ -1414,7 +1435,7 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
                 <thead>
                   <tr>
                     <th>#</th><th>Nombre</th><th>Código único</th>
-                    <th>Sección</th><th>Fecha y hora del voto</th><th>Estado</th>
+                    <th>Seccion</th><th>Fecha y hora del voto</th><th>Estado</th>
                   </tr>
                 </thead>
                 <tbody id="students-tbody"></tbody>
@@ -1480,54 +1501,37 @@ window.FB = { initFirebase, fbSaveParty, fbDeleteParty, fbBulkSaveStudents,
         </div>
 
         <div class="panel-card">
-          <h3>🔥 Credenciales de Firebase</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label>API Key</label>
-              <input type="text" id="fb-apikey" placeholder="AIzaSy...">
+          <h3>🔥 Firebase — Colegio Claretiano</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+            <div style="background:var(--surface);border-radius:8px;padding:0.75rem 1rem;">
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Proyecto</div>
+              <div style="font-size:0.88rem;font-weight:500;">sistemavotacionclaretiano</div>
             </div>
-            <div class="form-group">
-              <label>Database URL</label>
-              <input type="text" id="fb-dburl" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Project ID</label>
-              <input type="text" id="fb-projectid" placeholder="tu-proyecto-12345">
-            </div>
-            <div class="form-group">
-              <label>App ID</label>
-              <input type="text" id="fb-appid" placeholder="1:123456:web:abcdef">
+            <div style="background:var(--surface);border-radius:8px;padding:0.75rem 1rem;">
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Base de datos</div>
+              <div style="font-size:0.78rem;font-weight:500;word-break:break-all;">sistemavotacionclaretiano-default-rtdb</div>
             </div>
           </div>
-          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.25rem;">
-            <button class="btn-primary" onclick="connectFirebase()">🔥 Conectar Firebase</button>
-            <button class="btn-ghost" onclick="disconnectFirebase()">✕ Desconectar</button>
-          </div>
-          <div class="danger-zone" style="margin-top:1.25rem;">
+          <!-- Campos ocultos para compatibilidad -->
+          <input type="hidden" id="fb-apikey">
+          <input type="hidden" id="fb-dburl">
+          <input type="hidden" id="fb-projectid">
+          <input type="hidden" id="fb-appid">
+          <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">
+            Las credenciales están configuradas internamente. La conexión se establece automáticamente al cargar el sistema.
+          </p>
+          <div class="danger-zone">
             <h4>⚠️ Limpiar datos en Firebase</h4>
-            <p>Borra los votos y/o estudiantes directamente de la base de datos. No afecta la configuración ni los partidos.</p>
+            <p>Borra votos y/o estudiantes de la base de datos. No afecta partidos ni configuración.</p>
             <button class="danger-btn" onclick="fbClearVotesAndReset()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-              Limpiar votos en Firebase
+              Limpiar votos
             </button>
             <button class="danger-btn" onclick="fbClearStudents()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-              Limpiar estudiantes en Firebase
+              Limpiar estudiantes
             </button>
           </div>
-        </div>
-
-        <div class="panel-card">
-          <h3>📖 Cómo configurar Firebase</h3>
-          <ul class="step-list">
-            <li>Ve a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--cr-azul);font-weight:500;">console.firebase.google.com</a> y creá un proyecto nuevo (gratis)</li>
-            <li>Clic en el ícono <span class="code-inline">&lt;/&gt;</span> Web → registrá la app → copiá los datos de <span class="code-inline">firebaseConfig</span></li>
-            <li>En el menú, activá <span class="code-inline">Realtime Database → Crear base de datos</span> → elegí <span class="code-inline">Modo de prueba</span></li>
-            <li>Pegá los datos en los campos de arriba y hacé clic en <strong>Conectar Firebase</strong></li>
-            <li>El punto se pone verde ✓ — desde ese momento todo es tiempo real ⚡</li>
-          </ul>
         </div>
 
       </div><!-- /folder-config -->
@@ -2662,24 +2666,32 @@ window.onload = () => {
   const headerSub = document.querySelector('.header h1 span');
   if (headerSub) headerSub.textContent = APP.schoolName + ' — Elecciones ' + (APP.schoolYear || '2025');
 
-  // Auto-cargar config de Firebase si estaba guardada
-  const saved = localStorage.getItem('fbConfig');
-  if (saved) {
-    try {
-      const cfg = JSON.parse(saved);
-      // Cargar campos en el formulario
-      if (cfg.apiKey)      document.getElementById('fb-apikey').value    = cfg.apiKey;
-      if (cfg.databaseURL) document.getElementById('fb-dburl').value     = cfg.databaseURL;
-      if (cfg.projectId)   document.getElementById('fb-projectid').value = cfg.projectId;
-      if (cfg.appId)       document.getElementById('fb-appid').value     = cfg.appId;
-      // Reconectar automáticamente
-      setFbStatus('connecting');
-      window.FB.initFirebase(cfg);
-      setTimeout(() => {
-        if (APP.firebaseReady) setFbStatus('ok');
-        else setFbStatus('error');
-      }, 2500);
-    } catch(e) { localStorage.removeItem('fbConfig'); }
+  // ── Conectar automáticamente con credenciales fijas ──
+  setFbStatus('connecting');
+  // Rellenar campos del formulario (solo visual)
+  const fields = {
+    'fb-apikey':    FIREBASE_CONFIG.apiKey,
+    'fb-dburl':     FIREBASE_CONFIG.databaseURL,
+    'fb-projectid': FIREBASE_CONFIG.projectId,
+    'fb-appid':     FIREBASE_CONFIG.appId,
+  };
+  Object.entries(fields).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+
+  const ok = window.FB.initFirebase(FIREBASE_CONFIG);
+  if (ok) {
+    setTimeout(() => {
+      if (APP.firebaseReady) {
+        setFbStatus('ok');
+        updateSyncBar('ok', '✓ Firebase conectado', new Date().toLocaleString('es-CR'));
+      } else {
+        setFbStatus('error');
+      }
+    }, 2000);
+  } else {
+    setFbStatus('error');
   }
 };
 </script>
